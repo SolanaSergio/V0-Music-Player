@@ -15,13 +15,20 @@ interface RadioPlayerProps {
 
 export function RadioPlayer({ station, className }: RadioPlayerProps) {
   const [volume, setVolume] = useState(1)
-  const { streamState, connect, disconnect } = useRadioStream() // Remove station from initial hook call
+  const { streamState, connect, disconnect, setVolume: setStreamVolume } = useRadioStream()
 
   useEffect(() => {
-    if (streamState.isConnected && station) {
+    if (station) {
       connect(station.streamUrl)
     }
-  }, [station, streamState.isConnected, connect])
+    return () => {
+      disconnect()
+    }
+  }, [station, connect, disconnect])
+
+  useEffect(() => {
+    setStreamVolume(volume)
+  }, [volume, setStreamVolume])
 
   const togglePlayback = () => {
     if (streamState.isConnected) {

@@ -1,10 +1,6 @@
-import { Metadata } from 'next'
-import { PlayerView } from '@/components/player-view'
+'use client'
 
-export const metadata: Metadata = {
-  title: 'Now Playing | Music App',
-  description: 'Currently playing track and visualizer',
-}
+import { PlayerView } from '@/components/player-view'
 
 export default function PlayerPage() {
   return (

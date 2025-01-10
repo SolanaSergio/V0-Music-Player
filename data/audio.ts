@@ -1,4 +1,3 @@
-import { Music, Piano, Guitar, CloudRain } from 'lucide-react'
 import type { Genre, RadioStation, Track } from '@/types/audio'
 
 export const genres: Genre[] = [
@@ -7,28 +6,28 @@ export const genres: Genre[] = [
     name: 'Electronic',
     description: 'Electronic music and beats',
     imageUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&h=600&q=80',
-    icon: Music
+    icon: 'electronic'
   },
   {
     id: 'classical',
     name: 'Classical',
     description: 'Classical music and orchestral pieces',
     imageUrl: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=800&h=600&q=80',
-    icon: Piano
+    icon: 'classical'
   },
   {
     id: 'jazz',
     name: 'Jazz',
     description: 'Jazz and blues music',
     imageUrl: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=800&h=600&q=80',
-    icon: Guitar
+    icon: 'jazz'
   },
   {
     id: 'ambient',
     name: 'Ambient',
     description: 'Atmospheric and environmental sounds',
     imageUrl: 'https://images.unsplash.com/photo-1528722828814-77b9b83aafb2?w=800&h=600&q=80',
-    icon: CloudRain
+    icon: 'ambient'
   }
 ]
 

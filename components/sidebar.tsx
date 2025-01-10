@@ -32,11 +32,18 @@ const playlists = [
   { id: '4', name: 'Party Hits' },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  className?: string
+}
+
+export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname()
 
   return (
-    <aside className="w-[250px] border-r border-border/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <aside className={cn(
+      "w-[250px] border-r border-border/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
+      className
+    )}>
       <div className="h-16 border-b border-border/20 flex items-center px-6">
         <Link 
           href="/" 

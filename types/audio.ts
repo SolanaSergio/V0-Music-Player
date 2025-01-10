@@ -1,11 +1,14 @@
 import type { LucideIcon } from 'lucide-react'
+import type { IAudioContext } from 'standardized-audio-context'
+
+export type GenreIconType = 'electronic' | 'classical' | 'jazz' | 'ambient'
 
 export interface Genre {
   id: string
   name: string
   description: string
   imageUrl: string
-  icon: LucideIcon
+  icon: GenreIconType
 }
 
 export interface RadioStation {
@@ -47,6 +50,51 @@ export interface AudioState {
     format?: string
     connected: boolean
   }
+  audioFeatures?: AudioFeatures
+}
+
+export interface AudioFeatures {
+  frequency: FrequencyData
+  time: TimeData
+  beat: BeatData
+}
+
+export interface FrequencyData {
+  average: number
+  peaks: number[]
+  bands: {
+    bass: number
+    midrange: number
+    treble: number
+  }
+}
+
+export interface TimeData {
+  waveform: Float32Array
+  volume: number
+  zeroCrossings: number
+}
+
+export interface BeatData {
+  isBeat: boolean
+  energy: number
+  interval: number
+}
+
+export interface AudioProcessorConfig {
+  fftSize: number
+  smoothingTimeConstant: number
+  minDecibels: number
+  maxDecibels: number
+  beatDetectionThreshold: number
+  beatDetectionRange: [number, number]
+}
+
+export interface AudioContextState {
+  audioContext: AudioContext | null
+  analyser: AnalyserNode | null
+  gainNode: GainNode | null
+  processorNode: AudioWorkletNode | null
 }
 
 export interface AudioPlayerProps {
@@ -88,6 +136,7 @@ export interface AudioVisualizerProps {
   quality?: 'low' | 'medium' | 'high'
   showControls?: boolean
   interactive?: boolean
+  audioFeatures?: AudioFeatures
 }
 
 export interface RippleEffect {
@@ -110,5 +159,21 @@ export interface StreamState {
   }
   error?: string
   retryCount: number
+}
+
+export interface AudioProviderProps {
+  children: React.ReactNode
+  config?: Partial<AudioProcessorConfig>
+}
+
+export interface AudioMessage {
+  type: 'init' | 'start' | 'pause' | 'process' | 'processed'
+  data: {
+    fftSize?: number
+    frequencyData?: Uint8Array
+    timeData?: Uint8Array
+    track?: Track
+    features?: AudioFeatures
+  }
 }
 

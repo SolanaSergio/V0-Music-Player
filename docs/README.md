@@ -8,6 +8,7 @@
 - `development-notes.md` - Ongoing development decisions and changes
 - `prompt-guide.md` - Guide for writing effective prompts
 - `development-workflow.md` - Development processes and best practices
+- `architecture-patterns.md` - Architectural patterns and development context
 
 ## Quick Links
 - [Project Structure](./project-structure.md)
@@ -17,6 +18,7 @@
 - [Development Notes](./development-notes.md)
 - [Prompt Guide](./prompt-guide.md)
 - [Development Workflow](./development-workflow.md)
+- [Architecture Patterns](./architecture-patterns.md)
 
 ## Documentation Purpose
 This documentation is maintained to:
@@ -27,10 +29,38 @@ This documentation is maintained to:
 5. Document component usage and patterns
 6. Guide effective communication and prompts
 7. Establish consistent development practices
+8. Define architectural patterns and conventions
 
 ## Using This Documentation
 1. **New Issues**: Start with `debugging-log.md`
 2. **Adding Features**: Check `development-workflow.md`
 3. **Communication**: Reference `prompt-guide.md`
 4. **Project Overview**: See `project-structure.md`
-5. **Package Issues**: Consult `dependencies.md` 
+5. **Package Issues**: Consult `dependencies.md`
+6. **Architecture Decisions**: Review `architecture-patterns.md`
+
+## Documentation Categories
+
+### 1. Project Structure
+- Project organization
+- Directory structure
+- File naming conventions
+- Module organization
+
+### 2. Development
+- Workflow processes
+- Best practices
+- Coding standards
+- Testing guidelines
+
+### 3. Architecture
+- Design patterns
+- Component patterns
+- State management
+- Performance considerations
+
+### 4. Communication
+- Prompt guidelines
+- Issue reporting
+- Documentation standards
+- Collaboration practices 

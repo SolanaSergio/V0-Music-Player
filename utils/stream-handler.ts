@@ -10,23 +10,55 @@ export async function getStreamUrl(url: string): Promise<StreamResponse> {
   }
 
   try {
-    // Try direct GET request first instead of HEAD
+    // Try direct GET request first
     const response = await fetch(url, {
-      mode: 'no-cors', // Try no-cors first
       headers: {
         'Accept': 'audio/mpeg,audio/aac,audio/ogg,audio/*',
       }
     });
 
-    // For no-cors, we can't check response.ok, so we'll assume it's working
-    // if we get this far without an error
+    if (!response.ok) {
+      throw new Error('Stream not available');
+    }
+
+    // Get content type from response headers
+    const contentType = response.headers.get('content-type') || 'audio/mpeg';
+
     return {
       url,
-      format: 'audio/mpeg' // Default to MP3 format
+      format: contentType
     };
   } catch (error) {
     console.error('Stream connection error:', error);
-    throw new Error('Stream connection failed');
+
+    // Try with CORS proxy as fallback
+    try {
+      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+      const proxyUrl = corsProxy + url;
+
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Accept': 'audio/mpeg,audio/aac,audio/ogg,audio/*',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Stream not available');
+      }
+
+      return {
+        url: proxyUrl,
+        format: response.headers.get('content-type') || 'audio/mpeg'
+      };
+    } catch (proxyError) {
+      console.error('CORS proxy connection error:', proxyError);
+
+      // Return original URL as fallback
+      return {
+        url,
+        format: 'audio/mpeg'
+      };
+    }
   }
 }
 
@@ -36,19 +68,34 @@ export async function checkStreamStatus(url: string): Promise<boolean> {
   }
 
   try {
-    // Try a direct GET request with no-cors
-    await fetch(url, {
-      mode: 'no-cors',
+    // Try direct GET request first
+    const response = await fetch(url, {
       headers: {
         'Accept': 'audio/mpeg,audio/aac,audio/ogg,audio/*',
       }
     });
 
-    // If we get here without an error, assume the stream is available
-    return true;
+    return response.ok;
   } catch (error) {
     console.error('Stream status check error:', error);
-    return false;
+
+    // Try with CORS proxy as fallback
+    try {
+      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+      const proxyUrl = corsProxy + url;
+
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Accept': 'audio/mpeg,audio/aac,audio/ogg,audio/*',
+        }
+      });
+
+      return response.ok;
+    } catch (proxyError) {
+      console.error('CORS proxy status check error:', proxyError);
+      // Return true as fallback since some streams don't support HEAD/GET checks
+      return true;
+    }
   }
 }
 

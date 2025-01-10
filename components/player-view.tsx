@@ -18,10 +18,11 @@ import { VolumeEqualizer } from '@/components/volume-equalizer'
 import { QueueManager } from '@/components/queue-manager'
 import { ShareModal } from '@/components/share-modal'
 import { LyricsDisplay } from '@/components/lyrics-display'
-import { ImageLoader } from '@/components/image-loader'
 import { cn } from "@/lib/utils"
-import { featuredTracks } from '@/data/audio'
+import { featuredTracks, radioStations } from '@/data/audio'
 import { visualizerModes } from '@/config/visualizer'
+import { useRadioStream } from '@/hooks/use-radio-stream'
+import type { Track, RadioStation } from '@/types/audio'
 
 export function PlayerView() {
   const router = useRouter()
@@ -29,11 +30,12 @@ export function PlayerView() {
   const stationId = searchParams.get('station')
   const trackId = searchParams.get('track')
 
-  const initialTrack = featuredTracks.find(
-    track => track.id === (trackId || stationId)
-  ) || featuredTracks[0]
+  // Find either a radio station or a track
+  const radioStation = stationId ? radioStations.find(s => s.id === stationId) : null
+  const track = trackId ? featuredTracks.find(t => t.id === trackId) : null
+  const initialItem = radioStation || track || featuredTracks[0]
 
-  const [currentTrack, setCurrentTrack] = useState(initialTrack)
+  const [currentItem, setCurrentItem] = useState<Track | RadioStation>(initialItem)
   const [isPlaying, setIsPlaying] = useState(false)
   const [showLyrics, setShowLyrics] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
@@ -45,6 +47,9 @@ export function PlayerView() {
   const [queue, setQueue] = useState(featuredTracks)
   const [currentVisualizer, setCurrentVisualizer] = useState(visualizerModes[0])
   const [showVisualizerControls, setShowVisualizerControls] = useState(false)
+
+  // Radio stream handling
+  const { streamState, connect, disconnect } = useRadioStream()
 
   const VolumeIcon = volume === 0 
     ? VolumeX 
@@ -71,6 +76,39 @@ export function PlayerView() {
     const nextIndex = (currentIndex + 1) % visualizerModes.length
     setCurrentVisualizer(visualizerModes[nextIndex])
   }
+
+  const handlePlayPause = () => {
+    if ('streamUrl' in currentItem) {
+      // It's a radio station
+      if (streamState.isConnected) {
+        disconnect()
+      } else {
+        connect(currentItem.streamUrl)
+      }
+    } else {
+      // It's a track
+      setIsPlaying(!isPlaying)
+    }
+  }
+
+  // Initialize playback when component mounts
+  useEffect(() => {
+    if ('streamUrl' in currentItem) {
+      connect(currentItem.streamUrl)
+    }
+    return () => {
+      if ('streamUrl' in currentItem) {
+        disconnect()
+      }
+    }
+  }, [currentItem])
+
+  // Update playing state based on stream state
+  useEffect(() => {
+    if ('streamUrl' in currentItem) {
+      setIsPlaying(streamState.isConnected)
+    }
+  }, [streamState.isConnected, currentItem])
 
   return (
     <div className={cn(
@@ -105,7 +143,9 @@ export function PlayerView() {
                 </Button>
                 <div className="flex-1 min-w-0">
                   <h1 className="text-lg font-semibold truncate">Now Playing</h1>
-                  <p className="text-sm text-muted-foreground truncate">{currentTrack.title}</p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {'title' in currentItem ? currentItem.title : currentItem.name}
+                  </p>
                 </div>
               </div>
             </div>
@@ -119,7 +159,7 @@ export function PlayerView() {
           "w-full max-w-3xl mx-auto transition-all duration-700",
           isFullscreen ? "scale-110" : "scale-100"
         )}>
-          {/* Album Art and Visualizer */}
+          {/* Visualizer */}
           <motion.div
             layout
             className={cn(
@@ -149,54 +189,8 @@ export function PlayerView() {
                   quality="high"
                   showControls={showVisualizerControls}
                 />
-                <ImageLoader
-                  src={currentTrack.imageUrl}
-                  fallback={currentTrack.fallbackImage}
-                  alt={currentTrack.title}
-                  fill
-                  className={cn(
-                    "object-cover transition-opacity duration-1000",
-                    isPlaying ? "opacity-40" : "opacity-80"
-                  )}
-                />
               </motion.div>
             </AnimatePresence>
-
-            {/* Visualizer Controls Overlay */}
-            <AnimatePresence>
-              {showVisualizerControls && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center"
-                >
-                  <div className="text-center space-y-4">
-                    <h3 className="text-xl font-semibold">{currentVisualizer.label}</h3>
-                    <p className="text-sm text-muted-foreground">{currentVisualizer.description}</p>
-                    <Button onClick={handleVisualizerChange}>
-                      Change Visualizer
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Fullscreen Toggle */}
-            <Button
-              size="icon"
-              className="absolute top-4 right-4 backdrop-blur-sm bg-background/30 hover:bg-background/50 transition-all duration-300"
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsFullscreen(!isFullscreen)
-              }}
-            >
-              {isFullscreen ? (
-                <Minimize2 className="h-4 w-4" />
-              ) : (
-                <Maximize2 className="h-4 w-4" />
-              )}
-            </Button>
           </motion.div>
 
           {/* Track Info */}
@@ -206,245 +200,191 @@ export function PlayerView() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <h2 className="text-3xl font-bold tracking-tight">{currentTrack.title}</h2>
-            <p className="text-xl text-muted-foreground">{currentTrack.artist}</p>
-          </motion.div>
-
-          {/* Progress Bar */}
-          <motion.div
-            className="mt-8 space-y-2"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Slider
-              value={[progress]}
-              max={100}
-              step={0.1}
-              className="w-full"
-              onValueChange={([value]) => setProgress(value)}
-            />
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>1:23</span>
-              <span>3:45</span>
-            </div>
+            <h2 className="text-3xl font-bold tracking-tight">
+              {'title' in currentItem ? currentItem.title : currentItem.name}
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              {'artist' in currentItem ? currentItem.artist : 'Radio Station'}
+            </p>
           </motion.div>
 
           {/* Controls */}
           <motion.div
-            className="mt-8 space-y-6"
+            className="mt-8 flex items-center justify-center gap-4"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            {/* Main Controls */}
-            <div className="flex items-center justify-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-12 w-12 rounded-full transition-all duration-300 hover:scale-110",
-                  isShuffle && "text-primary bg-primary/20 hover:bg-primary/30"
-                )}
-                onClick={() => setIsShuffle(!isShuffle)}
-              >
-                <Shuffle className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 rounded-full transition-all duration-300 hover:scale-110"
-              >
-                <SkipBack className="h-5 w-5" />
-              </Button>
-              <Button
-                size="icon"
-                className={cn(
-                  "h-16 w-16 rounded-full transition-all duration-300 hover:scale-110",
-                  isPlaying ? "bg-primary hover:bg-primary/90" : "bg-primary hover:bg-primary/90"
-                )}
-                onClick={() => setIsPlaying(!isPlaying)}
-              >
-                <AnimatePresence mode="wait">
-                  {isPlaying ? (
-                    <motion.div
-                      key="pause"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                    >
-                      <Pause className="h-8 w-8" />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="play"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                    >
-                      <Play className="h-8 w-8" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 rounded-full transition-all duration-300 hover:scale-110"
-              >
-                <SkipForward className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-12 w-12 rounded-full transition-all duration-300 hover:scale-110",
-                  repeatMode !== 'none' && "text-primary bg-primary/20 hover:bg-primary/30"
-                )}
-                onClick={() => setRepeatMode(
-                  repeatMode === 'none' ? 'all' : 
-                  repeatMode === 'all' ? 'one' : 
-                  'none'
-                )}
-              >
-                <div className="relative">
-                  <Repeat className="h-5 w-5" />
-                  {repeatMode === 'one' && (
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold">
-                      1
-                    </span>
-                  )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full hover:bg-primary/20"
+              onClick={() => setIsShuffle(!isShuffle)}
+              disabled={!('title' in currentItem)}
+            >
+              <Shuffle className={cn("h-5 w-5", isShuffle && "text-primary")} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full hover:bg-primary/20"
+              disabled={!('title' in currentItem)}
+            >
+              <SkipBack className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-14 w-14 rounded-full hover:bg-primary/20"
+              onClick={handlePlayPause}
+              disabled={streamState.isBuffering}
+            >
+              {streamState.isBuffering ? (
+                <div className="animate-spin">
+                  <div className="h-5 w-5 border-2 border-primary border-r-transparent rounded-full" />
                 </div>
-              </Button>
-            </div>
+              ) : isPlaying ? (
+                <Pause className="h-7 w-7" />
+              ) : (
+                <Play className="h-7 w-7" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full hover:bg-primary/20"
+              disabled={!('title' in currentItem)}
+            >
+              <SkipForward className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full hover:bg-primary/20"
+              onClick={() => {
+                setRepeatMode(current => {
+                  if (current === 'none') return 'all'
+                  if (current === 'all') return 'one'
+                  return 'none'
+                })
+              }}
+              disabled={!('title' in currentItem)}
+            >
+              <Repeat className={cn(
+                "h-5 w-5",
+                repeatMode !== 'none' && "text-primary",
+                repeatMode === 'one' && "after:content-['1'] after:absolute after:text-[10px] after:font-bold after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2"
+              )} />
+            </Button>
+          </motion.div>
 
-            {/* Secondary Controls */}
-            <div className="flex items-center justify-center gap-3">
+          {/* Additional Controls */}
+          <motion.div
+            className="mt-4 flex items-center justify-center gap-4"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-primary/20"
+              onClick={() => setIsLiked(!isLiked)}
+            >
+              <Heart className={cn("h-4 w-4", isLiked && "fill-primary text-primary")} />
+            </Button>
+            <ShareModal
+              title={'title' in currentItem ? currentItem.title : currentItem.name}
+              url={window.location.href}
+              description="music track"
+            >
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn(
-                  "h-10 w-10 rounded-full transition-all duration-300",
-                  isLiked && "text-primary bg-primary/20 hover:bg-primary/30"
-                )}
-                onClick={() => setIsLiked(!isLiked)}
+                className="h-8 w-8 rounded-full hover:bg-primary/20"
               >
-                <Heart className={cn(
-                  "h-5 w-5 transition-transform duration-300",
-                  isLiked && "fill-current scale-110"
-                )} />
+                <Share2 className="h-4 w-4" />
               </Button>
-              <ShareModal
-                title="Share Track"
-                url={window.location.href}
-                description="music track"
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-full transition-all duration-300 hover:scale-110"
-                >
-                  <Share2 className="h-5 w-5" />
-                </Button>
-              </ShareModal>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-10 w-10 rounded-full transition-all duration-300",
-                  showLyrics && "text-primary bg-primary/20 hover:bg-primary/30"
-                )}
-                onClick={() => setShowLyrics(!showLyrics)}
-              >
-                <Mic2 className="h-5 w-5" />
-              </Button>
-              <VolumeEqualizer className="h-10 w-10 rounded-full transition-all duration-300" />
-              <div className="group flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-full transition-all duration-300"
-                  onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
-                >
-                  <VolumeIcon className="h-5 w-5" />
-                </Button>
-                <div className="w-0 overflow-hidden transition-all duration-300 group-hover:w-24">
-                  <Slider
-                    value={[volume * 100]}
-                    max={100}
-                    step={1}
-                    className="w-24"
-                    onValueChange={([value]) => setVolume(value / 100)}
-                  />
-                </div>
-              </div>
-              <QueueManager
-                currentTrack={currentTrack}
-                queue={queue}
-                onRemoveTrack={(index) => {
-                  const newQueue = [...queue]
-                  newQueue.splice(index, 1)
-                  setQueue(newQueue)
-                }}
-                onReorderTrack={(from, to) => {
-                  const newQueue = [...queue]
+            </ShareModal>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-primary/20"
+              onClick={() => setShowLyrics(!showLyrics)}
+              disabled={!('title' in currentItem)}
+            >
+              <Mic2 className="h-4 w-4" />
+            </Button>
+            <QueueManager
+              currentTrack={'title' in currentItem ? currentItem : undefined}
+              queue={queue}
+              onRemoveTrack={(index) => {
+                setQueue(prev => prev.filter((_, i) => i !== index))
+              }}
+              onReorderTrack={(from, to) => {
+                setQueue(prev => {
+                  const newQueue = [...prev]
                   const [removed] = newQueue.splice(from, 1)
                   newQueue.splice(to, 0, removed)
-                  setQueue(newQueue)
-                }}
+                  return newQueue
+                })
+              }}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full hover:bg-primary/20"
               >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-full transition-all duration-300 hover:scale-110"
-                >
-                  <ListMusic className="h-5 w-5" />
-                </Button>
-              </QueueManager>
-            </div>
+                <ListMusic className="h-4 w-4" />
+              </Button>
+            </QueueManager>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-primary/20"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
           </motion.div>
+
+          {/* Volume Control */}
+          <div className="mt-8 flex items-center justify-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-primary/20"
+              onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
+            >
+              <VolumeIcon className="h-4 w-4" />
+            </Button>
+            <div className="w-32">
+              <Slider
+                value={[volume * 100]}
+                max={100}
+                step={1}
+                className="transition-opacity"
+                onValueChange={([value]) => setVolume(value / 100)}
+              />
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {streamState.error && (
+            <motion.div
+              className="mt-4 text-center text-sm text-destructive"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              {streamState.error}
+            </motion.div>
+          )}
         </div>
       </div>
-
-      {/* Lyrics Panel */}
-      <AnimatePresence>
-        {showLyrics && !isFullscreen && (
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: 'auto' }}
-            exit={{ height: 0 }}
-            className="fixed bottom-0 left-0 right-0 overflow-hidden"
-          >
-            <div className="container py-4">
-              <div className="h-[200px] rounded-xl border border-border/5 bg-card/20 backdrop-blur-sm overflow-hidden">
-                <LyricsDisplay
-                  lyrics={[
-                    "Loading lyrics...",
-                    "This is a placeholder for lyrics display",
-                    "Real lyrics would be fetched from an API",
-                  ]}
-                  currentTime={0}
-                  onClose={() => setShowLyrics(false)}
-                />
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <style jsx global>{`
-        @keyframes grid-flow {
-          0% {
-            background-position: 0 0;
-          }
-          100% {
-            background-position: 24px 24px;
-          }
-        }
-        .animate-grid-flow {
-          animation: grid-flow 20s linear infinite;
-        }
-      `}</style>
     </div>
   )
 }

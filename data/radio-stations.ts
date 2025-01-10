@@ -1,3 +1,5 @@
+import type { RadioStation } from '@/types/audio'
+
 export const radioStations: RadioStation[] = [
   {
     id: 'lofi-beats',
@@ -5,7 +7,7 @@ export const radioStations: RadioStation[] = [
     genre: 'electronic',
     imageUrl: 'https://images.unsplash.com/photo-1519682577862-22b62b24e493?w=800&h=800&q=80',
     fallbackImage: '/images/radio-fallback.jpg',
-    streamUrl: 'http://usa9.fastcast4u.com/proxy/jamz?mp=/1',
+    streamUrl: 'https://play.streamafrica.net/lofiradio',
     description: 'Lo-fi beats for relaxation and focus.',
     isLive: true,
     tags: ['lofi', 'beats', 'chill'],
@@ -20,7 +22,7 @@ export const radioStations: RadioStation[] = [
     genre: 'classical',
     imageUrl: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=800&h=800&q=80',
     fallbackImage: '/images/radio-fallback.jpg',
-    streamUrl: 'http://live.str3am.com:2850/live',
+    streamUrl: 'https://live.musopen.org:8085/streamvbr0',
     description: 'Classical music from renowned composers.',
     isLive: true,
     tags: ['classical', 'orchestra', 'piano'],
@@ -35,7 +37,7 @@ export const radioStations: RadioStation[] = [
     genre: 'jazz',
     imageUrl: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=800&h=800&q=80',
     fallbackImage: '/images/radio-fallback.jpg',
-    streamUrl: 'http://usa9.fastcast4u.com/proxy/smoothjazz?mp=/1',
+    streamUrl: 'https://ice2.somafm.com/sonicuniverse-128-mp3',
     description: 'Smooth jazz for your relaxation.',
     isLive: true,
     tags: ['jazz', 'smooth', 'relaxing'],
@@ -50,7 +52,7 @@ export const radioStations: RadioStation[] = [
     genre: 'ambient',
     imageUrl: 'https://images.unsplash.com/photo-1594623930572-300a3011d9ae?w=800&h=800&q=80',
     fallbackImage: '/images/radio-fallback.jpg',
-    streamUrl: 'http://ice1.somafm.com/dronezone-128-mp3',
+    streamUrl: 'https://ice1.somafm.com/dronezone-128-mp3',
     description: 'Ambient sounds for sleep and relaxation.',
     isLive: true,
     tags: ['ambient', 'sleep', 'relaxation'],

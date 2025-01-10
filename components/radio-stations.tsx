@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Radio, Music2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Radio, Music2, Play } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
@@ -9,12 +10,10 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { ImageLoader } from '@/components/image-loader'
-import { RadioPlayer } from '@/components/radio-player'
 import { Loading } from '@/components/ui/loading'
 import { genres, radioStations } from '@/data/audio'
 import type { RadioStation } from '@/types/audio'
@@ -25,7 +24,7 @@ interface RadioStationsProps {
 }
 
 export function RadioStations({ initialGenre = 'all' }: RadioStationsProps) {
-  const [selectedStation, setSelectedStation] = useState<number | null>(null)
+  const router = useRouter()
   const [activeGenre, setActiveGenre] = useState(initialGenre)
   const [isPending, startTransition] = useTransition()
 
@@ -36,14 +35,17 @@ export function RadioStations({ initialGenre = 'all' }: RadioStationsProps) {
   const handleGenreChange = (value: string) => {
     startTransition(() => {
       setActiveGenre(value)
-      setSelectedStation(null)
     })
+  }
+
+  const handleStationClick = (station: RadioStation) => {
+    router.push(`/player?station=${station.id}`)
   }
 
   return (
     <div className="space-y-8 w-full">
       <Tabs defaultValue={activeGenre} onValueChange={handleGenreChange}>
-        <ScrollArea className="w-full [&>div]:!px-0 animate-in fade-in slide-in-from-top-4 duration-700" orientation="horizontal">
+        <ScrollArea className="w-full [&>div]:!px-0 animate-in fade-in slide-in-from-top-4 duration-700">
           <TabsList aria-label="Radio genres" className="h-10 w-full relative overflow-hidden rounded-lg bg-gradient-to-r from-background/90 via-background/50 to-background/90 backdrop-blur-md border-border/20 border shadow-[0_0_15px_rgba(0,0,0,0.1)] before:absolute before:inset-0 before:pointer-events-none before:bg-gradient-to-r before:from-primary/10 before:via-primary/5 before:to-primary/10 before:animate-pulse before:duration-3000 after:absolute after:inset-0 after:pointer-events-none after:bg-gradient-to-b after:from-white/5 after:to-transparent hover:shadow-[0_0_20px_rgba(0,0,0,0.15)] transition-shadow duration-300">
             <TabsTrigger 
               value="all" 
@@ -63,7 +65,7 @@ export function RadioStations({ initialGenre = 'all' }: RadioStationsProps) {
               </TabsTrigger>
             ))}
           </TabsList>
-          <ScrollBar orientation="horizontal" />
+          <ScrollBar />
         </ScrollArea>
 
         <TabsContent value={activeGenre} className="mt-6">
@@ -75,15 +77,16 @@ export function RadioStations({ initialGenre = 'all' }: RadioStationsProps) {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredStations.map((station, index) => (
+              {filteredStations.map((station) => (
                 <Card 
                   key={station.id} 
                   className={cn(
-                    "overflow-hidden transition-all duration-500",
+                    "overflow-hidden transition-all duration-500 cursor-pointer",
                     "hover:bg-background/40 group",
                     "border border-border/50 hover:border-primary/50",
-                    "shadow-lg hover:shadow-xl hover:shadow-primary/5"
+                    "shadow-lg hover:shadow-xl hover:shadow-primary/5",
                   )}
+                  onClick={() => handleStationClick(station)}
                 >
                   <div className="relative">
                     <div className="aspect-video relative overflow-hidden">
@@ -100,21 +103,9 @@ export function RadioStations({ initialGenre = 'all' }: RadioStationsProps) {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent opacity-60 transition-opacity group-hover:opacity-80" />
                     </div>
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity sm:hover:scale-110"
-                      onClick={() => setSelectedStation(index)}
-                    >
-                      {selectedStation === index ? (
-                        <Radio className="h-4 w-4 animate-pulse" />
-                      ) : (
-                        <Music2 className="h-4 w-4" />
-                      )}
-                      <span className="sr-only">
-                        {selectedStation === index ? 'Now Playing' : `Play ${station.name}`}
-                      </span>
-                    </Button>
+                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Play className="h-5 w-5 text-primary" />
+                    </div>
                   </div>
                   <CardContent className="p-4 space-y-4">
                     <div className="space-y-2">
@@ -137,23 +128,17 @@ export function RadioStations({ initialGenre = 'all' }: RadioStationsProps) {
                         {station.description}
                       </CardDescription>
                     </div>
-                    <div className="mt-4 border-t border-border/50 pt-4">
-                      <RadioPlayer station={station} />
+                    <div className="flex gap-2 overflow-x-auto">
+                      {station.tags.map(tag => (
+                        <Badge 
+                          key={tag} 
+                          variant="outline"
+                          className="capitalize whitespace-nowrap text-xs"
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
                     </div>
-                    <ScrollArea className="w-full mt-4" orientation="horizontal">
-                      <div className="flex gap-2">
-                        {station.tags.map(tag => (
-                          <Badge 
-                            key={tag} 
-                            variant="outline"
-                            className="capitalize whitespace-nowrap text-xs"
-                          >
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
                   </CardContent>
                 </Card>
               ))}

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Compass } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
 import { ImageLoader } from '@/components/image-loader'
+import { GenreIcon } from '@/components/genre-icon'
 import type { Genre } from '@/types/audio'
 
 interface GenreExplorerProps {
@@ -37,9 +38,12 @@ export function GenreExplorer({ genres }: GenreExplorerProps) {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
                   <div className="absolute bottom-0 left-0 right-0 p-4 transform transition-transform duration-300 group-hover:translate-y-0">
-                    <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors">
-                      {genre.name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <GenreIcon genre={genre.icon} className="h-5 w-5 text-white group-hover:text-primary transition-colors" />
+                      <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors">
+                        {genre.name}
+                      </h3>
+                    </div>
                     <p className="text-sm text-white/80 line-clamp-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {genre.description}
                     </p>

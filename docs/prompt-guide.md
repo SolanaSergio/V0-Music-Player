@@ -1,53 +1,145 @@
-# Prompt Guide
+# Prompt and Context Guide
 
-## Effective Prompt Structure
+## Core Project Patterns
 
-### Basic Format
-```markdown
-Task: [Brief description of what needs to be done]
-Context: [Any relevant background information]
-Location: [File paths or areas of the code involved]
-Expected Outcome: [What success looks like]
+### 1. Audio Processing
+```
+Source → Provider → Worker → Visualization
+     └→ Player → Queue Manager
 ```
 
-### Additional Context Helpers
-- **File Changes**: Mention if you've modified any files recently
-- **Error Messages**: Include full error text if applicable
-- **Current State**: Describe what you're currently working on
-- **Dependencies**: List any related features or components
-
-## Quick Reference Tags
-Use these tags in your prompts for faster context:
-
-- `#bug` - Bug fixes needed
-- `#feature` - New feature request
-- `#refactor` - Code improvement request
-- `#style` - UI/styling changes
-- `#deps` - Dependency issues
-- `#doc` - Documentation needs
-
-## Examples
-
-### Good Prompt:
-```markdown
-Task: Fix login button not responding
-Context: After recent React update
-Location: components/auth/LoginButton.tsx
-Expected Outcome: Button clicks should trigger login
-#bug
+### 2. Component Structure
+```
+Layout → Provider → Content → Feature
+     └→ ErrorBoundary → Fallback
 ```
 
-### Better With Details:
-```markdown
-Task: Fix login button not responding
-Context: 
-- After React 18 update
-- Console shows TypeError
-- Only happens on Chrome
-Location: components/auth/LoginButton.tsx
-Expected Outcome:
-- Button responds to clicks
-- No console errors
-- Works across browsers
-#bug
-``` 
+### 3. Performance Pattern
+```
+Heavy Task → Worker
+UI Update → Optimization
+Error → Boundary → Recovery
+```
+
+## Essential Context Elements
+
+### 1. System Information
+```
+OS: Windows
+Shell: PowerShell
+Project Root: /c%3A/Users/sergi/OneDrive/Desktop/V0%20Music%20Player
+Node: Latest LTS
+Browser Support: Modern browsers
+Mobile: Progressive enhancement
+```
+
+### 2. Critical Files
+```
+Core:
+- audio-player.tsx
+- audio-processor.ts
+- audio-visualizer.tsx
+- audio-provider.tsx
+
+Features:
+- player-view.tsx
+- queue-manager.tsx
+- radio-player.tsx
+```
+
+### 3. Project State
+- Active branch
+- Current task/feature
+- Known issues
+- Recent changes
+- Performance metrics
+- Browser compatibility
+
+### 4. Technical Constraints
+- Audio processing limits
+- Browser compatibility needs
+- Mobile performance requirements
+- Memory management
+
+## Quick Solutions
+
+### 1. Performance Issues
+```
+CPU Spike    → Move to Worker
+Memory Issue → Cleanup Effect
+UI Lag       → Optimization
+```
+
+### 2. Audio Issues
+```
+Processing → Worker
+Playback   → Feature Detection
+Memory     → Cleanup
+```
+
+### 3. UI Issues
+```
+Component Error → Error Boundary
+State Issue    → Provider Check
+Layout Break   → Responsive Fix
+```
+
+## Common Operations
+
+### 1. Development Commands
+```powershell
+# Development
+npm run dev
+
+# Build
+npm run build
+
+# Type Check
+npm run typecheck
+```
+
+### 2. File Operations
+```powershell
+# View files
+Get-Content filename
+
+# Find files
+Get-ChildItem -Recurse -Filter "pattern"
+```
+
+### 3. Error Handling
+```typescript
+// Component errors
+try {
+  // Logic
+} catch {
+  // ErrorBoundary fallback
+}
+
+// Audio operations
+try {
+  // Processing
+} catch {
+  // Degraded mode
+}
+```
+
+## Best Practices
+
+### 1. Audio Features
+- Use Workers for processing
+- Implement fallbacks
+- Monitor performance
+- Clean up resources
+
+### 2. UI Components
+- Error boundaries
+- Performance monitoring
+- Progressive enhancement
+- Memory management
+
+### 3. Development Flow
+- Check existing patterns
+- Consider constraints
+- Test performance
+- Document changes 

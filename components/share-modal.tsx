@@ -17,9 +17,10 @@ interface ShareModalProps {
   title: string
   url: string
   description?: string
+  children?: React.ReactNode
 }
 
-export function ShareModal({ title, url, description }: ShareModalProps) {
+export function ShareModal({ title, url, description, children }: ShareModalProps) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -44,10 +45,12 @@ export function ShareModal({ title, url, description }: ShareModalProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Share2 className="h-4 w-4" />
-          <span className="sr-only">Share</span>
-        </Button>
+        {children || (
+          <Button variant="ghost" size="icon">
+            <Share2 className="h-4 w-4" />
+            <span className="sr-only">Share</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

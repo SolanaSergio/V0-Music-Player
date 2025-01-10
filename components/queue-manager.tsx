@@ -21,6 +21,7 @@ interface QueueManagerProps {
   onRemoveTrack: (index: number) => void
   onReorderTrack: (fromIndex: number, toIndex: number) => void
   className?: string
+  children?: React.ReactNode
 }
 
 export function QueueManager({
@@ -28,7 +29,8 @@ export function QueueManager({
   queue,
   onRemoveTrack,
   onReorderTrack,
-  className
+  className,
+  children
 }: QueueManagerProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
 
@@ -49,10 +51,12 @@ export function QueueManager({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className={className}>
-          <List className="h-4 w-4" />
-          <span className="sr-only">Queue</span>
-        </Button>
+        {children || (
+          <Button variant="ghost" size="icon" className={className}>
+            <List className="h-4 w-4" />
+            <span className="sr-only">Queue</span>
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
