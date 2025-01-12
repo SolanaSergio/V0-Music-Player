@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Music2, ImageIcon, Check } from 'lucide-react'
+import { Plus, Image, CheckCircle } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -76,7 +76,7 @@ export function PlaylistCreator({ onCreatePlaylist, className }: PlaylistCreator
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center">
-                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    <Image className="h-8 w-8 text-muted-foreground" aria-label="Upload playlist image" />
                   </div>
                 )}
               </div>
@@ -118,7 +118,7 @@ export function PlaylistCreator({ onCreatePlaylist, className }: PlaylistCreator
                 <>Creating...</>
               ) : (
                 <>
-                  <Check className="mr-2 h-4 w-4" />
+                  <CheckCircle className="mr-2 h-4 w-4" />
                   Create
                 </>
               )}

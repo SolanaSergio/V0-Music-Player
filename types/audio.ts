@@ -1,5 +1,4 @@
 import type { LucideIcon } from 'lucide-react'
-import type { IAudioContext } from 'standardized-audio-context'
 
 export type GenreIconType = 'electronic' | 'classical' | 'jazz' | 'ambient'
 
@@ -18,21 +17,23 @@ export interface RadioStation {
   imageUrl: string
   fallbackImage: string
   streamUrl: string
+  directStreamUrl?: string
   description: string
   isLive: boolean
   tags: string[]
-  // New fields for stream info
-  format?: string
-  bitrate?: number
-  region?: string
-  language?: string
+  format: string
+  bitrate: number
+  region: string
+  language: string
 }
 
 export interface Track {
   id: string
   title: string
-  artist: string
-  genre?: string
+  artist: string // Assuming you might want to add artist field
+  album: string // Assuming you might want to add album field
+  duration: number // Assuming you might want to add duration field
+  genre: GenreIconType // Assuming you might want to add genre field
   imageUrl: string
   fallbackImage: string
   audioUrl: string

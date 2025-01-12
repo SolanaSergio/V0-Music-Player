@@ -9,7 +9,7 @@ import { RecentlyPlayed } from '@/components/recently-played'
 import { DailyMixes } from '@/components/daily-mixes'
 import { GenreExplorer } from '@/components/genre-explorer'
 import { Loading } from '@/components/ui/loading'
-import { featuredTracks, radioStations, genres } from '@/data/audio'
+import { featuredTracks, genres } from '@/data/audio'
 
 export default function Home() {
   return (

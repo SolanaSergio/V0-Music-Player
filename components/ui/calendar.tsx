@@ -54,8 +54,14 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+        Button: (props) => {
+          const isNext = props['aria-label']?.includes('next');
+          return (
+            <button {...props}>
+              {isNext ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
+          );
+        }
       }}
       {...props}
     />

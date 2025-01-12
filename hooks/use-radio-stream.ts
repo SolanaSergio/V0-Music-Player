@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { RadioStation, StreamState } from '@/types/audio'
+import type { StreamState } from '@/types/audio'
 import { getStreamUrl } from '@/utils/stream-handler'
+import { useAudioContext } from '@/components/audio-provider'
 
 const RETRY_ATTEMPTS = 3
 const RETRY_DELAY = 2000
-const BUFFER_CHECK_INTERVAL = 1000
 const CONNECTION_TIMEOUT = 15000
 
 export function useRadioStream() {
+  const { audioContext, masterGain, createAnalyser, resumeContext } = useAudioContext()
+  
   const [streamState, setStreamState] = useState<StreamState>({
     isBuffering: false,
     isConnected: false,
@@ -16,15 +18,14 @@ export function useRadioStream() {
   })
   
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
   const retryTimeoutRef = useRef<NodeJS.Timeout>()
-  const bufferCheckRef = useRef<NodeJS.Timeout>()
   const connectionTimeoutRef = useRef<NodeJS.Timeout>()
   const volumeRef = useRef<number>(1)
 
   const cleanup = useCallback(() => {
-    console.log('Cleaning up audio resources')
+    console.log('Cleaning up radio stream resources')
     if (audioRef.current) {
       console.log('Stopping audio playback')
       audioRef.current.pause()
@@ -34,60 +35,11 @@ export function useRadioStream() {
     if (sourceNodeRef.current) {
       console.log('Disconnecting source node')
       sourceNodeRef.current.disconnect()
-    }
-    if (audioContextRef.current?.state !== 'closed') {
-      console.log('Closing audio context')
-      audioContextRef.current?.close()
+      sourceNodeRef.current = null
     }
     if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current)
-    if (bufferCheckRef.current) clearTimeout(bufferCheckRef.current)
     if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current)
     console.log('Cleanup complete')
-  }, [])
-
-  const initAudioContext = useCallback(async () => {
-    if (!audioRef.current) {
-      console.error('No audio element available')
-      return
-    }
-
-    try {
-      console.log('Initializing audio context')
-      // Create new audio context if needed
-      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext
-        audioContextRef.current = new AudioContext({
-          latencyHint: 'interactive',
-          sampleRate: 44100
-        })
-        console.log('Created new audio context, state:', audioContextRef.current.state)
-      }
-
-      // Resume context if suspended
-      if (audioContextRef.current.state === 'suspended') {
-        console.log('Resuming suspended audio context')
-        await audioContextRef.current.resume()
-        console.log('Audio context resumed, state:', audioContextRef.current.state)
-      }
-
-      // Create and connect source node if needed
-      if (!sourceNodeRef.current) {
-        console.log('Creating media element source')
-        sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current)
-        sourceNodeRef.current.connect(audioContextRef.current.destination)
-        console.log('Source node connected to destination')
-      }
-    } catch (error) {
-      console.error('Failed to initialize audio context:', error)
-      throw error
-    }
-  }, [])
-
-  const setVolume = useCallback((value: number) => {
-    volumeRef.current = value
-    if (audioRef.current) {
-      audioRef.current.volume = value
-    }
   }, [])
 
   const connectToStream = useCallback(async (url: string) => {
@@ -95,17 +47,19 @@ export function useRadioStream() {
     console.log('Connecting to stream:', url)
 
     try {
-      if (!audioRef.current) {
-        console.log('Creating new Audio element')
-        audioRef.current = new Audio()
-        audioRef.current.preload = 'auto'
-        audioRef.current.crossOrigin = 'anonymous'
-        audioRef.current.volume = volumeRef.current
+      if (!audioContext) {
+        throw new Error('Audio context not initialized')
       }
 
-      // Initialize audio context before setting up stream
-      console.log('Initializing audio context')
-      await initAudioContext()
+      await resumeContext()
+
+      // Create audio element with proper configuration
+      console.log('Creating new Audio element')
+      const audio = new Audio()
+      audio.crossOrigin = 'anonymous' // Set before any other operations
+      audio.preload = 'auto'
+      audio.volume = volumeRef.current
+      audioRef.current = audio
 
       setStreamState(prev => ({
         ...prev,
@@ -135,7 +89,31 @@ export function useRadioStream() {
 
       // Configure audio element
       console.log('Setting audio source:', streamResponse.url)
-      audioRef.current.src = streamResponse.url
+      audio.src = streamResponse.url
+
+      // Create and connect nodes in the correct order
+      if (!sourceNodeRef.current) {
+        sourceNodeRef.current = audioContext.createMediaElementSource(audio)
+      }
+
+      if (!analyserRef.current) {
+        analyserRef.current = createAnalyser()
+      }
+
+      // Proper connection chain: source -> gain -> analyser -> destination
+      if (masterGain && analyserRef.current) {
+        console.log('Connecting audio nodes')
+        sourceNodeRef.current.disconnect() // Ensure clean connections
+        sourceNodeRef.current.connect(masterGain)
+        masterGain.disconnect() // Ensure clean connections
+        masterGain.connect(analyserRef.current)
+        analyserRef.current.connect(audioContext.destination)
+      } else {
+        // Fallback connection if nodes are missing
+        console.log('Fallback: Connecting source directly to destination')
+        sourceNodeRef.current.disconnect()
+        sourceNodeRef.current.connect(audioContext.destination)
+      }
       
       // Create a promise that resolves when the audio can play
       const canPlayPromise = new Promise((resolve, reject) => {
@@ -147,49 +125,59 @@ export function useRadioStream() {
         const handleCanPlay = () => {
           console.log('Audio can play event received')
           clearTimeout(timeoutId)
-          audioRef.current?.removeEventListener('canplay', handleCanPlay)
-          audioRef.current?.removeEventListener('error', handleError)
+          audio.removeEventListener('canplay', handleCanPlay)
+          audio.removeEventListener('error', handleError)
           resolve(true)
         }
 
         const handleError = (e: Event) => {
-          const audioError = audioRef.current?.error
+          const audioError = audio.error
           console.error('Audio error during load:', {
             error: e,
             code: audioError?.code,
             message: audioError?.message
           })
           clearTimeout(timeoutId)
-          audioRef.current?.removeEventListener('canplay', handleCanPlay)
-          audioRef.current?.removeEventListener('error', handleError)
+          audio.removeEventListener('canplay', handleCanPlay)
+          audio.removeEventListener('error', handleError)
           reject(new Error(`Audio load failed: ${audioError?.message || 'Unknown error'}`))
         }
 
-        audioRef.current?.addEventListener('canplay', handleCanPlay)
-        audioRef.current?.addEventListener('error', handleError)
+        audio.addEventListener('canplay', handleCanPlay)
+        audio.addEventListener('error', handleError)
       })
 
       // Load and wait for can play
       console.log('Loading audio...')
-      audioRef.current.load()
+      audio.load()
       await canPlayPromise
       console.log('Audio loaded successfully')
       
       // Try to play
       try {
         console.log('Attempting to play...')
-        await audioRef.current.play()
+        await audio.play()
         console.log('Playback started successfully')
       } catch (playError) {
         console.error('Play error:', playError)
-        if (playError instanceof Error && playError.name === 'NotAllowedError') {
-          setStreamState(prev => ({
-            ...prev,
-            error: 'Playback not allowed. Please click again to start.',
-            isBuffering: false,
-            isConnected: false
-          }))
-          return
+        if (playError instanceof Error) {
+          if (playError.name === 'NotAllowedError') {
+            setStreamState(prev => ({
+              ...prev,
+              error: 'Playback not allowed. Please click again to start.',
+              isBuffering: false,
+              isConnected: false
+            }))
+            return
+          } else if (playError.name === 'NotSupportedError') {
+            setStreamState(prev => ({
+              ...prev,
+              error: 'Stream format not supported. Please try a different station.',
+              isBuffering: false,
+              isConnected: false
+            }))
+            return
+          }
         }
         throw playError
       }
@@ -243,7 +231,7 @@ export function useRadioStream() {
         }))
       }
     }
-  }, [cleanup, streamState.retryCount, initAudioContext])
+  }, [cleanup, streamState.retryCount, audioContext, masterGain, createAnalyser, resumeContext])
 
   const disconnect = useCallback(() => {
     console.log('Disconnecting stream')
@@ -255,90 +243,10 @@ export function useRadioStream() {
     })
   }, [cleanup])
 
-  useEffect(() => {
-    if (!audioRef.current) return
-
-    const audio = audioRef.current
-
-    const handlePlay = () => {
-      console.log('Play event received')
-      setStreamState(prev => ({
-        ...prev,
-        isBuffering: false,
-        isConnected: true,
-        error: undefined
-      }))
-    }
-
-    const handlePause = () => {
-      console.log('Pause event received')
-      setStreamState(prev => ({
-        ...prev,
-        isBuffering: false,
-        isConnected: false
-      }))
-    }
-
-    const handleWaiting = () => {
-      console.log('Waiting event received')
-      setStreamState(prev => ({
-        ...prev,
-        isBuffering: true
-      }))
-    }
-
-    const handlePlaying = () => {
-      console.log('Playing event received')
-      setStreamState(prev => ({
-        ...prev,
-        isBuffering: false,
-        isConnected: true
-      }))
-    }
-
-    const handleError = (e: ErrorEvent) => {
-      console.error('Audio error event:', e)
-      console.log('Audio element error state:', audioRef.current?.error)
-      const error = audioRef.current?.error
-      let errorMessage = 'Stream playback error. Please try again.'
-
-      if (error) {
-        switch (error.code) {
-          case 1: // MEDIA_ERR_ABORTED
-            errorMessage = 'Playback aborted. Please try again.'
-            break
-          case 2: // MEDIA_ERR_NETWORK
-            errorMessage = 'Network error. Please check your connection.'
-            break
-          case 3: // MEDIA_ERR_DECODE
-            errorMessage = 'Stream decode error. Please try again.'
-            break
-          case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
-            errorMessage = 'Stream format not supported. Please try a different station.'
-            break
-        }
-      }
-
-      setStreamState(prev => ({
-        ...prev,
-        error: errorMessage,
-        isBuffering: false,
-        isConnected: false
-      }))
-    }
-
-    audio.addEventListener('play', handlePlay)
-    audio.addEventListener('pause', handlePause)
-    audio.addEventListener('waiting', handleWaiting)
-    audio.addEventListener('playing', handlePlaying)
-    audio.addEventListener('error', handleError as EventListener)
-
-    return () => {
-      audio.removeEventListener('play', handlePlay)
-      audio.removeEventListener('pause', handlePause)
-      audio.removeEventListener('waiting', handleWaiting)
-      audio.removeEventListener('playing', handlePlaying)
-      audio.removeEventListener('error', handleError as EventListener)
+  const setVolume = useCallback((value: number) => {
+    volumeRef.current = value
+    if (audioRef.current) {
+      audioRef.current.volume = value
     }
   }, [])
 
@@ -348,10 +256,11 @@ export function useRadioStream() {
   }, [cleanup])
 
   return {
-    streamState,
-    connect: connectToStream,
+    ...streamState,
+    connectToStream,
     disconnect,
-    setVolume
+    setVolume,
+    analyser: analyserRef.current
   }
 }
 

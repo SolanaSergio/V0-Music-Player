@@ -62,7 +62,8 @@ V0 Music Player/
 ### Audio Core
 - `audio-player.tsx`: Main playback interface
 - `audio-provider.tsx`: Global audio context
-- `audio-visualizer.tsx`: Real-time visualization
+- `audio-visualizer.tsx`: Real-time visualization with modular system
+- `visualizers/*.ts`: Individual visualization implementations
 - `radio-player.tsx`: Radio stream handling
 
 ### UI Components
@@ -220,3 +221,20 @@ export default {
 - Image optimization
 - Audio streaming optimization
 - Caching strategies 
+
+### Components Directory
+```
+components/
+├── audio-player.tsx      # Main playback interface
+├── audio-provider.tsx    # Global audio context
+├── audio-visualizer.tsx  # Main visualization component
+├── visualizers/         # Visualization implementations
+│   ├── types.ts        # Shared visualization types
+│   ├── bars.ts         # Frequency bars visualization
+│   ├── wave.ts         # Waveform visualization
+│   ├── circle.ts       # Circular visualization
+│   └── ripples.ts      # Interactive ripple effects
+├── radio-player.tsx     # Radio stream handling
+└── ui/                  # Shared UI components
+    └── ...
+``` 

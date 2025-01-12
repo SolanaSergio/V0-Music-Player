@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Copy, Share2, Twitter, Facebook, LinkIcon } from 'lucide-react'
+import { Check, Copy, Share2, Twitter, Facebook } from 'lucide-react'
 import {
   Dialog,
   DialogContent,

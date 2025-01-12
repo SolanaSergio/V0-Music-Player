@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import { Play, Pause } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { AudioPlayer } from '@/components/audio-player'
 import { ImageLoader } from '@/components/image-loader'
 import { MusicWave } from '@/components/music-wave'
 import { cn } from '@/lib/utils'
@@ -15,7 +13,7 @@ interface FeaturedProps {
 }
 
 export function Featured({ tracks }: FeaturedProps) {
-  const [selectedTrack, setSelectedTrack] = useState<number | null>(null)
+  const [highlightedTrack, setHighlightedTrack] = useState<number | null>(null)
   const [hoveredTrack, setHoveredTrack] = useState<number | null>(null)
 
   return (
@@ -32,7 +30,7 @@ export function Featured({ tracks }: FeaturedProps) {
               "group relative aspect-[4/3] overflow-hidden rounded-lg",
               "transition-transform duration-300 hover:scale-[1.02]",
               "before:absolute before:inset-0 before:bg-gradient-to-t before:from-black/60 before:to-transparent before:z-10",
-              selectedTrack === index && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+              highlightedTrack === index && "ring-2 ring-primary ring-offset-2 ring-offset-background"
             )}
             onMouseEnter={() => setHoveredTrack(index)}
             onMouseLeave={() => setHoveredTrack(null)}
@@ -44,7 +42,7 @@ export function Featured({ tracks }: FeaturedProps) {
               fill
               className={cn(
                 "object-cover transition-transform duration-700",
-                (hoveredTrack === index || selectedTrack === index) && "scale-110"
+                (hoveredTrack === index || highlightedTrack === index) && "scale-110"
               )}
             />
             <div className="absolute inset-0 z-20 p-4">
@@ -83,7 +81,7 @@ export function Featured({ tracks }: FeaturedProps) {
             </div>
             <div className="absolute top-4 right-4">
               <MusicWave 
-                playing={selectedTrack === index} 
+                playing={highlightedTrack === index} 
                 className="opacity-0 group-hover:opacity-100 transition-opacity" 
               />
             </div>
@@ -95,16 +93,17 @@ export function Featured({ tracks }: FeaturedProps) {
                 "hover:scale-110 hover:bg-primary hover:text-primary-foreground"
               )}
               onClick={() => {
+                setHighlightedTrack(highlightedTrack === index ? null : index)
                 window.location.href = `/player?track=${track.id}`
               }}
             >
-              {selectedTrack === index ? (
+              {highlightedTrack === index ? (
                 <Pause className="h-4 w-4" />
               ) : (
                 <Play className="h-4 w-4" />
               )}
               <span className="sr-only">
-                {selectedTrack === index ? 'Pause' : 'Play'} {track.title}
+                {highlightedTrack === index ? 'Pause' : 'Play'} {track.title}
               </span>
             </Button>
           </div>

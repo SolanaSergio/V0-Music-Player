@@ -1,65 +1,59 @@
-import type { RadioStation } from '@/types/audio'
+export interface RadioStation {
+  id: string
+  name: string
+  description: string
+  streamUrl: string
+  directStreamUrl?: string
+  format?: string
+  image: string
+  tags: string[]
+  isActive: boolean
+}
 
 export const radioStations: RadioStation[] = [
   {
     id: 'lofi-beats',
-    name: 'Lo-Fi Beats',
-    genre: 'electronic',
-    imageUrl: 'https://images.unsplash.com/photo-1519682577862-22b62b24e493?w=800&h=800&q=80',
-    fallbackImage: '/images/radio-fallback.jpg',
-    streamUrl: 'https://stream.zeno.fm/fyn8eh3h5f8uv',
-    description: 'Lo-fi beats for relaxation and focus.',
-    isLive: true,
-    tags: ['lofi', 'beats', 'chill'],
-    format: 'audio/mpeg',
-    bitrate: 128,
-    region: 'Global',
-    language: 'None'
+    name: 'Lofi Girl',
+    description: 'Chill beats for studying and relaxing',
+    streamUrl: '/api/stream/lofi-beats',
+    directStreamUrl: 'https://play.streamafrica.net/lofiradio',
+    format: 'audio/aac',
+    image: '/images/stations/lofi-girl.jpg',
+    tags: ['lofi', 'beats', 'chill', 'study'],
+    isActive: true
   },
   {
-    id: 'classical-radio',
-    name: 'Classical Radio',
-    genre: 'classical',
-    imageUrl: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=800&h=800&q=80',
-    fallbackImage: '/images/radio-fallback.jpg',
-    streamUrl: 'https://live.musopen.org:8085/streamvbr0',
-    description: 'Classical music from renowned composers.',
-    isLive: true,
-    tags: ['classical', 'orchestra', 'piano'],
+    id: 'synthwave',
+    name: 'Synthwave Radio',
+    description: 'Retro synth vibes and electronic beats',
+    streamUrl: '/api/stream/synthwave',
+    directStreamUrl: 'http://stream.zeno.fm/f3wvbbqmdg8uv',
     format: 'audio/mpeg',
-    bitrate: 128,
-    region: 'Europe',
-    language: 'English'
+    image: '/images/stations/synthwave.jpg',
+    tags: ['synthwave', 'electronic', 'retro'],
+    isActive: true
   },
   {
-    id: 'smooth-jazz',
-    name: 'Smooth Jazz',
-    genre: 'jazz',
-    imageUrl: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=800&h=800&q=80',
-    fallbackImage: '/images/radio-fallback.jpg',
-    streamUrl: 'https://ice2.somafm.com/sonicuniverse-128-mp3',
-    description: 'Smooth jazz for your relaxation.',
-    isLive: true,
-    tags: ['jazz', 'smooth', 'relaxing'],
+    id: 'jazz-cafe',
+    name: 'Jazz Café',
+    description: 'Smooth jazz and coffee house vibes',
+    streamUrl: '/api/stream/jazz-cafe',
+    directStreamUrl: 'http://stream.zeno.fm/h59g4k7u7k8uv',
     format: 'audio/mpeg',
-    bitrate: 128,
-    region: 'USA',
-    language: 'English'
+    image: '/images/stations/jazz-cafe.jpg',
+    tags: ['jazz', 'smooth', 'cafe'],
+    isActive: true
   },
   {
-    id: 'ambient-sleep',
-    name: 'Ambient Sleep',
-    genre: 'ambient',
-    imageUrl: 'https://images.unsplash.com/photo-1594623930572-300a3011d9ae?w=800&h=800&q=80',
-    fallbackImage: '/images/radio-fallback.jpg',
-    streamUrl: 'https://ice1.somafm.com/dronezone-128-mp3',
-    description: 'Ambient sounds for sleep and relaxation.',
-    isLive: true,
-    tags: ['ambient', 'sleep', 'relaxation'],
+    id: 'ambient',
+    name: 'Ambient Waves',
+    description: 'Atmospheric and ambient soundscapes',
+    streamUrl: '/api/stream/ambient',
+    directStreamUrl: 'http://stream.zeno.fm/d853t8qmdg8uv',
     format: 'audio/mpeg',
-    bitrate: 128,
-    region: 'Global',
-    language: 'None'
+    image: '/images/stations/ambient.jpg',
+    tags: ['ambient', 'atmospheric', 'chill'],
+    isActive: true
   }
 ]
 

@@ -2,11 +2,10 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Minimize2, Maximize2, Volume2, SkipBack, SkipForward, Play, Pause } from 'lucide-react'
+import { Maximize2, Volume2, SkipBack, SkipForward, Play, Pause } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { ImageLoader } from '@/components/image-loader'
-import { MusicWave } from '@/components/music-wave'
 import type { Track } from '@/types/audio'
 
 interface MiniPlayerProps {

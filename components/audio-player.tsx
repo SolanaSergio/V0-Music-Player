@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Loader2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX, X } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { ImageLoader } from '@/components/image-loader'
@@ -13,7 +13,7 @@ import type { AudioPlayerProps } from '@/types/audio'
 
 export function AudioPlayer({ tracks, initialTrackIndex = 0, onClose, className }: AudioPlayerProps) {
   const {
-    currentTrack,
+    currentTrackIndex,
     isPlaying,
     volume,
     progress,
@@ -26,28 +26,55 @@ export function AudioPlayer({ tracks, initialTrackIndex = 0, onClose, className 
     setVolume,
   } = useAudio(tracks, initialTrackIndex)
 
+  // Keyboard event handling with proper cleanup
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle keyboard events when player is focused
+      if (!document.activeElement?.closest('[role="dialog"]')) return
+
       if (e.key === 'Escape') {
+        e.preventDefault()
         onClose?.()
-      } else if (e.key === ' ') {
+      } else if (e.key === ' ' || e.key === 'k') {
         e.preventDefault()
         togglePlay()
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft' || e.key === 'j') {
+        e.preventDefault()
         previousTrack()
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === 'ArrowRight' || e.key === 'l') {
+        e.preventDefault()
         nextTrack()
+      } else if (e.key === 'm') {
+        e.preventDefault()
+        setVolume(volume === 0 ? 1 : 0)
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose, togglePlay, previousTrack, nextTrack])
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
+  }, [onClose, togglePlay, previousTrack, nextTrack, volume, setVolume])
 
-  if (!currentTrack) return null
+  // Focus management
+  useEffect(() => {
+    const previousActiveElement = document.activeElement as HTMLElement
+    const playerElement = document.getElementById('audio-player-dialog')
+    
+    if (playerElement) {
+      playerElement.focus()
+    }
+
+    return () => {
+      if (previousActiveElement && 'focus' in previousActiveElement) {
+        previousActiveElement.focus()
+      }
+    }
+  }, [])
+
+  if (!tracks[currentTrackIndex]) return null
 
   return (
     <div 
+      id="audio-player-dialog"
       className={cn(
         "bg-background/95 backdrop-blur-md z-50",
         "fixed inset-0 md:relative md:inset-auto",
@@ -56,6 +83,7 @@ export function AudioPlayer({ tracks, initialTrackIndex = 0, onClose, className 
       role="dialog"
       aria-modal="true"
       aria-labelledby="player-title"
+      tabIndex={-1}
     >
       <div className="h-full md:h-auto overflow-auto">
         <div className="min-h-full md:min-h-0 flex flex-col items-center justify-center p-4">
@@ -65,8 +93,8 @@ export function AudioPlayer({ tracks, initialTrackIndex = 0, onClose, className 
               <div className="flex items-center gap-4">
                 <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-lg shadow-md">
                   <ImageLoader
-                    src={currentTrack.imageUrl}
-                    fallback={currentTrack.fallbackImage}
+                    src={tracks[currentTrackIndex].imageUrl}
+                    fallback={tracks[currentTrackIndex].fallbackImage}
                     alt=""
                     width={80}
                     height={80}
@@ -75,10 +103,10 @@ export function AudioPlayer({ tracks, initialTrackIndex = 0, onClose, className 
                 </div>
                 <div className="min-w-0">
                   <h2 id="player-title" className="text-lg sm:text-xl font-semibold truncate">
-                    {currentTrack.title}
+                    {tracks[currentTrackIndex].title}
                   </h2>
                   <p className="text-sm text-muted-foreground line-clamp-2">
-                    {currentTrack.artist}
+                    {tracks[currentTrackIndex].artist}
                   </p>
                 </div>
               </div>

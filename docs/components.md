@@ -45,14 +45,44 @@ interface AudioVisualizerProps {
   audioFeatures?: AudioFeatures
 }
 ```
-Real-time audio visualization component using Canvas API.
+Real-time audio visualization component using Canvas API. Now uses a modular architecture with separate visualization implementations.
 
 **Features:**
-- Multiple visualization modes (bars, wave, circle, etc.)
+- Multiple visualization modes (bars, wave, circle, ripples)
+- Modular visualization system
 - Color scheme support
 - Quality settings
 - Interactive controls
+- High DPI support
 - Performance optimized
+- Touch support
+
+**Visualization Modules:**
+- `bars.ts`: Frequency bar visualization
+- `wave.ts`: Waveform visualization
+- `circle.ts`: Circular frequency visualization
+- `ripples.ts`: Interactive ripple effects
+
+**Example Usage:**
+```tsx
+<AudioVisualizer
+  analyser={audioContext.analyser}
+  visualizerMode="bars"
+  colorScheme="default"
+  sensitivity={1.5}
+  quality="medium"
+  showControls={true}
+  interactive={true}
+/>
+```
+
+**Performance Considerations:**
+- Uses `requestAnimationFrame` for smooth rendering
+- Quality settings for different performance levels
+- Reusable data arrays
+- Efficient canvas clearing with alpha blending
+- High DPI support with proper scaling
+- Memory cleanup on unmount
 
 ### RadioPlayer
 ```typescript

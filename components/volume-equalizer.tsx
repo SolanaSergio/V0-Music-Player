@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Sliders, Save } from 'lucide-react'
+import { Sliders } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import {

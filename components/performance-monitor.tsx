@@ -3,10 +3,27 @@
 import { useEffect, useState } from 'react'
 import { debounce } from '@/utils/performance'
 
+interface MemoryInfo {
+  used: number
+  total: number
+}
+
+interface NetworkInfo {
+  type: string
+  downlink: number
+}
+
+interface ExtendedNavigator extends Navigator {
+  connection: {
+    effectiveType: string
+    downlink: number
+  }
+}
+
 export function PerformanceMonitor() {
   const [fps, setFps] = useState(0)
-  const [memory, setMemory] = useState<any>(null)
-  const [networkInfo, setNetworkInfo] = useState<any>(null)
+  const [memory, setMemory] = useState<MemoryInfo | null>(null)
+  const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null)
 
   useEffect(() => {
     let frameCount = 0
@@ -26,20 +43,21 @@ export function PerformanceMonitor() {
     }
 
     const updateMemory = debounce(() => {
-      if (performance.memory) {
+      if ('memory' in performance) {
+        const perf = performance as unknown as { memory: { usedJSHeapSize: number; totalJSHeapSize: number } }
         setMemory({
-          used: Math.round(performance.memory.usedJSHeapSize / 1048576),
-          total: Math.round(performance.memory.totalJSHeapSize / 1048576)
+          used: Math.round(perf.memory.usedJSHeapSize / 1048576),
+          total: Math.round(perf.memory.totalJSHeapSize / 1048576)
         })
       }
     }, 1000)
 
     const updateNetwork = debounce(() => {
       if ('connection' in navigator) {
-        const conn = (navigator as any).connection
+        const nav = navigator as ExtendedNavigator
         setNetworkInfo({
-          type: conn.effectiveType,
-          downlink: conn.downlink
+          type: nav.connection.effectiveType,
+          downlink: nav.connection.downlink
         })
       }
     }, 1000)
