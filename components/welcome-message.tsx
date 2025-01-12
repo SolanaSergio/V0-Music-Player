@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Sun, Moon, Music2 } from 'lucide-react'
+import { Sun, Moon, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function WelcomeMessage() {
@@ -38,10 +38,10 @@ export function WelcomeMessage() {
             Good {timeOfDay}
           </h2>
           <p className="text-muted-foreground">
-            Ready to discover some new music?
+            Explore our curated collection of live radio stations
           </p>
         </div>
-        <Music2 className="ml-auto h-6 w-6 text-primary animate-bounce" />
+        <Radio className="ml-auto h-6 w-6 text-primary animate-pulse" />
       </div>
     </div>
   )

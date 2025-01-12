@@ -6,38 +6,35 @@ export interface Genre {
   id: string
   name: string
   description: string
-  imageUrl: string
-  icon: GenreIconType
+  image: string
+  icon: string
 }
 
 export interface RadioStation {
   id: string
   name: string
+  description: string
   genre: string
-  imageUrl: string
-  fallbackImage: string
+  image: string
   streamUrl: string
   directStreamUrl?: string
-  description: string
-  isLive: boolean
-  tags: string[]
   format: string
   bitrate: number
   region: string
   language: string
+  isLive: boolean
+  tags: string[]
 }
 
 export interface Track {
   id: string
   title: string
-  artist: string // Assuming you might want to add artist field
-  album: string // Assuming you might want to add album field
-  duration: number // Assuming you might want to add duration field
-  genre: GenreIconType // Assuming you might want to add genre field
-  imageUrl: string
-  fallbackImage: string
+  artist: string
+  album: string
+  duration: number
+  genre: string
+  image: string
   audioUrl: string
-  isLive?: boolean
 }
 
 export interface AudioState {

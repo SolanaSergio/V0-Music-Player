@@ -6,13 +6,13 @@ import { Music } from 'lucide-react'
 
 interface ImageLoaderProps extends Omit<ImageProps, 'src' | 'alt'> {
   src: string
-  fallback: string
+  fallback?: string
   alt: string
 }
 
 export function ImageLoader({
   src,
-  fallback,
+  fallback = '/images/fallback.jpg',
   alt,
   className,
   ...props

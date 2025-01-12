@@ -20,21 +20,39 @@ import { ShareModal } from '@/components/share-modal'
 import { LyricsDisplay } from '@/components/lyrics-display'
 import { cn } from "@/lib/utils"
 import { featuredTracks } from '@/data/audio'
+import { radioStations } from '@/data/radio-stations'
 import { visualizerModes, colorSchemes } from '@/config/visualizer'
-import type { VisualizerMode, ColorScheme, Track } from '@/types/audio'
+import type { VisualizerMode, ColorScheme, Track, GenreIconType } from '@/types/audio'
+import { useRadioStream } from '@/hooks/use-radio-stream'
 
 export function PlayerView() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const trackId = searchParams.get('track')
+  const stationId = searchParams.get('station')
 
-  // Find the requested track or default to the first track
-  const initialTrack = trackId 
-    ? featuredTracks.find(track => track.id === trackId) 
-    : featuredTracks[0]
+  // Find the requested track/station or default to the first track
+  const initialTrack = stationId 
+    ? {
+        id: stationId,
+        title: radioStations.find(s => s.id === stationId)?.name || 'Unknown Station',
+        artist: 'Live Radio',
+        album: radioStations.find(s => s.id === stationId)?.description || '',
+        duration: 0,
+        genre: 'electronic' as GenreIconType,
+        image: radioStations.find(s => s.id === stationId)?.image || '',
+        audioUrl: `/api/stream/${stationId}`,
+        isLive: true
+      }
+    : trackId 
+      ? featuredTracks.find(track => track.id === trackId) 
+      : featuredTracks[0]
+
+  const station = stationId ? radioStations.find(s => s.id === stationId) : null
+  const { isConnected, isBuffering, error, connectToStream, disconnect, analyser } = useRadioStream()
 
   const [currentTrack, setCurrentTrack] = useState<Track>(initialTrack || featuredTracks[0])
-  const [isPlaying, setIsPlaying] = useState(!!trackId) // Auto-play when navigating from Featured
+  const [isPlaying, setIsPlaying] = useState(false)
   const [showLyrics, setShowLyrics] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -96,41 +114,33 @@ export function PlayerView() {
         />
       </div>
 
-      {/* Header */}
-      {!isFullscreen && (
-        <header className="absolute top-0 left-0 right-0 z-10">
-          <div className="container py-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => router.back()}
-                  className="hover:bg-primary/20"
-                >
-                  <ChevronDown className="h-5 w-5" />
-                </Button>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-lg font-semibold truncate">Now Playing</h1>
-                  <p className="text-sm text-muted-foreground truncate">{currentTrack.title}</p>
-                </div>
-              </div>
+      {/* Main Content */}
+      <div className="container max-w-7xl mx-auto min-h-[calc(100vh-4rem)] flex flex-col py-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.back()}
+              className="hover:bg-primary/20"
+            >
+              <ChevronDown className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Now Playing</h1>
+              <p className="text-muted-foreground">{currentTrack.title} • {currentTrack.artist}</p>
             </div>
           </div>
-        </header>
-      )}
+        </div>
 
-      {/* Main Content */}
-      <div className="container max-w-4xl mx-auto h-full flex flex-col items-center justify-center p-4 pt-16">
-        <div className={cn(
-          "w-full max-w-3xl mx-auto transition-all duration-700",
-          isFullscreen ? "scale-110" : "scale-100"
-        )}>
+        {/* Player Section */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-8 max-w-5xl mx-auto w-full">
           {/* Visualizer */}
           <motion.div
             layout
             className={cn(
-              "relative aspect-[16/9] w-full rounded-xl overflow-hidden border border-border/5 bg-background/50 backdrop-blur-sm shadow-xl group",
+              "relative w-full aspect-[21/9] rounded-xl overflow-hidden border border-border/5 bg-background/50 backdrop-blur-sm shadow-xl group",
               "transition-transform duration-700",
               isFullscreen ? "hover:scale-105" : "hover:scale-[1.02]"
             )}
@@ -139,8 +149,8 @@ export function PlayerView() {
             transition={{ duration: 0.5 }}
           >
             <AudioVisualizer
-              analyser={null} // TODO: Connect to audio context
-              className="absolute inset-0 z-10"
+              analyser={analyser}
+              className="absolute inset-0 z-10 w-full h-full"
               visualizerMode={currentVisualizer.id}
               colorScheme={currentColorScheme.id}
               sensitivity={sensitivity}
@@ -150,7 +160,10 @@ export function PlayerView() {
 
             {/* Visualizer Controls */}
             <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-wrap items-center gap-2 bg-background/60 backdrop-blur-md p-3 transition-opacity duration-200 opacity-0 group-hover:opacity-100">
-              <Select value={currentVisualizer.id} onValueChange={(value: VisualizerMode['id']) => setCurrentVisualizer(visualizerModes.find(v => v.id === value) || visualizerModes[0])}>
+              <Select 
+                value={currentVisualizer.id} 
+                onValueChange={(value: VisualizerMode['id']) => setCurrentVisualizer(visualizerModes.find(v => v.id === value) || visualizerModes[0])}
+              >
                 <SelectTrigger className="w-[140px] bg-background/50">
                   <SelectValue />
                 </SelectTrigger>
@@ -166,7 +179,10 @@ export function PlayerView() {
                 </SelectContent>
               </Select>
 
-              <Select value={currentColorScheme.id} onValueChange={(value: ColorScheme['id']) => setCurrentColorScheme(colorSchemes.find(c => c.id === value) || colorSchemes[0])}>
+              <Select 
+                value={currentColorScheme.id} 
+                onValueChange={(value: ColorScheme['id']) => setCurrentColorScheme(colorSchemes.find(c => c.id === value) || colorSchemes[0])}
+              >
                 <SelectTrigger className="w-[140px] bg-background/50">
                   <SelectValue />
                 </SelectTrigger>
@@ -219,7 +235,7 @@ export function PlayerView() {
 
           {/* Track Info */}
           <motion.div
-            className="text-center mt-6 space-y-1.5"
+            className="text-center space-y-2"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -230,7 +246,7 @@ export function PlayerView() {
 
           {/* Progress Bar */}
           <motion.div
-            className="mt-8 space-y-2"
+            className="w-full max-w-3xl space-y-1.5"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4 }}
@@ -250,7 +266,7 @@ export function PlayerView() {
 
           {/* Controls */}
           <motion.div
-            className="mt-6 space-y-4"
+            className="space-y-4 w-full max-w-lg"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5 }}
@@ -281,10 +297,27 @@ export function PlayerView() {
                   "h-16 w-16 rounded-full transition-all duration-300 hover:scale-110",
                   isPlaying ? "bg-primary hover:bg-primary/90" : "bg-primary hover:bg-primary/90"
                 )}
-                onClick={() => setIsPlaying(!isPlaying)}
+                onClick={async () => {
+                  if (station) {
+                    try {
+                      if (isConnected) {
+                        disconnect()
+                        setIsPlaying(false)
+                      } else {
+                        await connectToStream(`/api/stream/${station.id}`)
+                        setIsPlaying(true)
+                      }
+                    } catch (err) {
+                      console.error('Playback toggle failed:', err)
+                    }
+                  } else {
+                    setIsPlaying(!isPlaying)
+                  }
+                }}
+                disabled={isBuffering}
               >
                 <AnimatePresence mode="wait">
-                  {isPlaying ? (
+                  {(station ? isConnected : isPlaying) ? (
                     <motion.div
                       key="pause"
                       initial={{ scale: 0 }}
@@ -348,7 +381,7 @@ export function PlayerView() {
                 onClick={() => setIsLiked(!isLiked)}
               >
                 <Heart className={cn(
-                  "h-5 w-5 transition-transform duration-300",
+                  "h-4 w-4 transition-transform duration-300",
                   isLiked && "fill-current scale-110"
                 )} />
               </Button>
@@ -362,7 +395,7 @@ export function PlayerView() {
                   size="icon"
                   className="h-10 w-10 rounded-full transition-all duration-300 hover:scale-110"
                 >
-                  <Share2 className="h-5 w-5" />
+                  <Share2 className="h-4 w-4" />
                 </Button>
               </ShareModal>
               <Button
@@ -374,7 +407,7 @@ export function PlayerView() {
                 )}
                 onClick={() => setShowLyrics(!showLyrics)}
               >
-                <Mic2 className="h-5 w-5" />
+                <Mic2 className="h-4 w-4" />
               </Button>
               <VolumeEqualizer className="h-10 w-10 rounded-full transition-all duration-300" />
               <div className="group flex items-center gap-2">
@@ -385,9 +418,9 @@ export function PlayerView() {
                   onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
                 >
                   {volume === 0 ? (
-                    <VolumeX className="h-5 w-5" />
+                    <VolumeX className="h-4 w-4" />
                   ) : (
-                    <Volume2 className="h-5 w-5" />
+                    <Volume2 className="h-4 w-4" />
                   )}
                 </Button>
                 <div className="w-0 overflow-hidden transition-all duration-300 group-hover:w-24">
@@ -420,7 +453,7 @@ export function PlayerView() {
                   size="icon"
                   className="h-10 w-10 rounded-full transition-all duration-300 hover:scale-110"
                 >
-                  <ListMusic className="h-5 w-5" />
+                  <ListMusic className="h-4 w-4" />
                 </Button>
               </QueueManager>
             </div>
@@ -428,31 +461,39 @@ export function PlayerView() {
         </div>
       </div>
 
-      {/* Lyrics Panel */}
+      {/* Lyrics Sheet */}
       <AnimatePresence>
         {showLyrics && !isFullscreen && (
           <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: 'auto' }}
-            exit={{ height: 0 }}
-            className="fixed bottom-0 left-0 right-0 overflow-hidden"
+            initial={{ opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: "100%" }}
+            className="fixed inset-x-0 bottom-0 h-96 bg-background/95 backdrop-blur-sm border-t border-border/20 z-50"
           >
-            <div className="container py-4">
-              <div className="h-[200px] rounded-xl border border-border/5 bg-card/20 backdrop-blur-sm overflow-hidden">
-                <LyricsDisplay
-                  lyrics={[
-                    "Loading lyrics...",
-                    "This is a placeholder for lyrics display",
-                    "Real lyrics would be fetched from an API",
-                  ]}
-                  currentTime={0}
-                  onClose={() => setShowLyrics(false)}
-                />
-              </div>
-            </div>
+            <LyricsDisplay
+              lyrics={[
+                "Loading lyrics...",
+                "This is a placeholder for lyrics display",
+                "Real lyrics would be fetched from an API",
+              ]}
+              currentTime={0}
+              onClose={() => setShowLyrics(false)}
+            />
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Error and Loading States */}
+      {error && (
+        <div className="fixed bottom-4 left-0 right-0 text-sm text-destructive text-center">
+          {error}
+        </div>
+      )}
+      {isBuffering && (
+        <div className="fixed bottom-4 left-0 right-0 text-sm text-muted-foreground text-center">
+          Buffering...
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes grid-flow {

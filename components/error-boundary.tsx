@@ -11,20 +11,34 @@ interface Props {
 interface State {
   hasError: boolean
   error: Error | null
+  errorInfo: ErrorInfo | null
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null
+    error: null,
+    errorInfo: null
   }
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error }
+    // Log the error to help with debugging
+    console.error('Error caught by boundary:', error)
+    return { hasError: true, error, errorInfo: null }
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo)
+    // Log detailed error information
+    console.group('Detailed Error Information')
+    console.error('Error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    })
+    console.error('Component Stack:', errorInfo.componentStack)
+    console.groupEnd()
+
+    this.setState({ errorInfo })
   }
 
   public render() {
@@ -34,12 +48,21 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="w-full max-w-md space-y-4">
             <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
             <h2 className="text-2xl font-bold">Something went wrong</h2>
-            <p className="text-muted-foreground">
-              {this.state.error?.message || 'An unexpected error occurred'}
-            </p>
+            <div className="text-muted-foreground space-y-2">
+              <p className="font-medium text-destructive">
+                {this.state.error?.name}: {this.state.error?.message}
+              </p>
+              {process.env.NODE_ENV === 'development' && (
+                <pre className="mt-2 text-xs text-left bg-muted p-4 rounded-lg overflow-auto max-h-[200px]">
+                  {this.state.error?.stack}
+                  {'\n\nComponent Stack:\n'}
+                  {this.state.errorInfo?.componentStack}
+                </pre>
+              )}
+            </div>
             <Button
               onClick={() => {
-                this.setState({ hasError: false, error: null })
+                this.setState({ hasError: false, error: null, errorInfo: null })
                 window.location.reload()
               }}
               className="mt-4"

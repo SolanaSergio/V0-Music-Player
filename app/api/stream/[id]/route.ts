@@ -1,67 +1,105 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { radioStations } from '@/data/radio-stations'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
+
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('Stream request received for station:', params.id)
+    
     const station = radioStations.find(s => s.id === params.id)
     if (!station) {
+      console.error('Station not found:', params.id)
       return new NextResponse('Station not found', { status: 404 })
     }
 
-    // Use directStreamUrl instead of streamUrl to avoid proxy loop
-    if (!station.directStreamUrl) {
-      return new NextResponse('Direct stream URL not available', { status: 400 })
+    const directUrl = station.directStreamUrl || station.streamUrl
+    if (!directUrl) {
+      console.error('No stream URL found for station:', params.id)
+      return new NextResponse('Stream URL not found', { status: 404 })
     }
 
-    console.log('Proxying stream for:', station.name)
-    console.log('Direct stream URL:', station.directStreamUrl)
+    console.log('Proxying stream for station:', station.name)
+    console.log('Direct URL:', directUrl)
 
-    // Fetch the stream with appropriate headers
-    const response = await fetch(station.directStreamUrl, {
-      headers: {
-        'User-Agent': 'V0MusicPlayer/1.0',
-        'Accept': 'audio/*',
-        'Origin': request.headers.get('origin') || '*',
-        'Referer': request.headers.get('referer') || '*'
-      }
+    // Prepare request headers
+    const headers = new Headers({
+      'Accept': '*/*',
+      'User-Agent': 'V0MusicPlayer/1.0',
+      'Origin': request.headers.get('origin') || '*',
+      'Referer': request.headers.get('referer') || '*'
     })
 
-    if (!response.ok) {
-      console.error('Stream fetch failed:', response.status, response.statusText)
-      return new NextResponse('Stream not available', { status: response.status })
+    // Forward range header if present
+    const range = request.headers.get('range')
+    if (range) {
+      console.log('Forwarding range header:', range)
+      headers.set('range', range)
     }
 
-    // Get content type from response or fallback to station format
-    const contentType = response.headers.get('content-type') || station.format || 'audio/mpeg'
-    console.log('Stream content type:', contentType)
+    try {
+      const response = await fetch(directUrl, {
+        headers,
+        method: 'GET',
+        cache: 'no-store'
+      })
 
-    // Create response with appropriate headers
-    const proxyResponse = new NextResponse(response.body, {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
+      if (!response.ok) {
+        console.error('Stream fetch failed:', response.status, response.statusText)
+        return new NextResponse('Stream fetch failed', { status: response.status })
+      }
+
+      // Get the content type and other headers from the response
+      const contentType = response.headers.get('content-type')
+      const contentLength = response.headers.get('content-length')
+      const acceptRanges = response.headers.get('accept-ranges')
+
+      // Prepare response headers
+      const responseHeaders = new Headers({
+        'Content-Type': contentType || 'audio/mpeg',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Range',
-        'Accept-Ranges': 'bytes',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Range',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Connection': 'keep-alive',
-        'Transfer-Encoding': 'chunked',
-        'X-Stream-Source': station.name
-      }
-    })
+      })
 
-    return proxyResponse
+      if (contentLength) {
+        responseHeaders.set('Content-Length', contentLength)
+      }
+      if (acceptRanges) {
+        responseHeaders.set('Accept-Ranges', acceptRanges)
+      }
+      if (range && response.status === 206) {
+        responseHeaders.set('Content-Range', response.headers.get('content-range')!)
+      }
+
+      return new NextResponse(response.body, {
+        status: response.status,
+        headers: responseHeaders,
+      })
+
+    } catch (error) {
+      console.error('Stream proxy error:', error)
+      return new NextResponse('Stream proxy error', { status: 500 })
+    }
   } catch (error) {
-    console.error('Stream proxy error:', error)
-    return new NextResponse(
-      'Internal server error: ' + (error instanceof Error ? error.message : 'Unknown error'),
-      { status: 500 }
-    )
+    console.error('Stream handler error:', error)
+    return new NextResponse('Internal server error', { status: 500 })
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Range',
+      'Access-Control-Max-Age': '86400',
+    },
+  })
 } 

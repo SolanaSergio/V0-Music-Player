@@ -1,11 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import type { StreamState } from '@/types/audio'
-import { getStreamUrl } from '@/utils/stream-handler'
-import { useAudioContext } from '@/components/audio-provider'
+'use client'
 
-const RETRY_ATTEMPTS = 3
-const RETRY_DELAY = 2000
-const CONNECTION_TIMEOUT = 15000
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useAudioContext } from '@/components/audio-provider'
+import type { StreamState } from '@/types/audio'
 
 export function useRadioStream() {
   const { audioContext, masterGain, createAnalyser, resumeContext } = useAudioContext()
@@ -23,6 +20,12 @@ export function useRadioStream() {
   const retryTimeoutRef = useRef<NodeJS.Timeout>()
   const connectionTimeoutRef = useRef<NodeJS.Timeout>()
   const volumeRef = useRef<number>(1)
+
+  useEffect(() => {
+    if (audioContext && !analyserRef.current) {
+      analyserRef.current = createAnalyser()
+    }
+  }, [audioContext, createAnalyser])
 
   const cleanup = useCallback(() => {
     console.log('Cleaning up radio stream resources')
@@ -52,11 +55,12 @@ export function useRadioStream() {
       }
 
       await resumeContext()
+      console.log('Audio context resumed')
 
       // Create audio element with proper configuration
       console.log('Creating new Audio element')
       const audio = new Audio()
-      audio.crossOrigin = 'anonymous' // Set before any other operations
+      audio.crossOrigin = 'anonymous'
       audio.preload = 'auto'
       audio.volume = volumeRef.current
       audioRef.current = audio
@@ -76,162 +80,140 @@ export function useRadioStream() {
           isBuffering: false,
           isConnected: false
         }))
-      }, CONNECTION_TIMEOUT)
+        cleanup()
+      }, 30000) // 30 seconds timeout
 
-      // Get stream URL with proper format
-      console.log('Getting stream URL...')
-      const streamResponse = await getStreamUrl(url)
-      console.log('Stream response:', streamResponse)
-      
-      if (!streamResponse.url) {
-        throw new Error('Invalid stream URL received')
-      }
-
-      // Configure audio element
-      console.log('Setting audio source:', streamResponse.url)
-      audio.src = streamResponse.url
-
-      // Create and connect nodes in the correct order
-      if (!sourceNodeRef.current) {
-        sourceNodeRef.current = audioContext.createMediaElementSource(audio)
-      }
-
-      if (!analyserRef.current) {
-        analyserRef.current = createAnalyser()
-      }
-
-      // Proper connection chain: source -> gain -> analyser -> destination
-      if (masterGain && analyserRef.current) {
-        console.log('Connecting audio nodes')
-        sourceNodeRef.current.disconnect() // Ensure clean connections
-        sourceNodeRef.current.connect(masterGain)
-        masterGain.disconnect() // Ensure clean connections
-        masterGain.connect(analyserRef.current)
-        analyserRef.current.connect(audioContext.destination)
-      } else {
-        // Fallback connection if nodes are missing
-        console.log('Fallback: Connecting source directly to destination')
-        sourceNodeRef.current.disconnect()
-        sourceNodeRef.current.connect(audioContext.destination)
-      }
-      
-      // Create a promise that resolves when the audio can play
-      const canPlayPromise = new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          console.log('Audio load timeout reached')
-          reject(new Error('Audio load timeout'))
-        }, 5000)
-
-        const handleCanPlay = () => {
-          console.log('Audio can play event received')
-          clearTimeout(timeoutId)
-          audio.removeEventListener('canplay', handleCanPlay)
-          audio.removeEventListener('error', handleError)
-          resolve(true)
-        }
-
-        const handleError = (e: Event) => {
-          const audioError = audio.error
-          console.error('Audio error during load:', {
-            error: e,
-            code: audioError?.code,
-            message: audioError?.message
-          })
-          clearTimeout(timeoutId)
-          audio.removeEventListener('canplay', handleCanPlay)
-          audio.removeEventListener('error', handleError)
-          reject(new Error(`Audio load failed: ${audioError?.message || 'Unknown error'}`))
-        }
-
-        audio.addEventListener('canplay', handleCanPlay)
-        audio.addEventListener('error', handleError)
-      })
-
-      // Load and wait for can play
-      console.log('Loading audio...')
-      audio.load()
-      await canPlayPromise
-      console.log('Audio loaded successfully')
-      
-      // Try to play
       try {
-        console.log('Attempting to play...')
-        await audio.play()
-        console.log('Playback started successfully')
-      } catch (playError) {
-        console.error('Play error:', playError)
-        if (playError instanceof Error) {
-          if (playError.name === 'NotAllowedError') {
-            setStreamState(prev => ({
-              ...prev,
-              error: 'Playback not allowed. Please click again to start.',
-              isBuffering: false,
-              isConnected: false
-            }))
-            return
-          } else if (playError.name === 'NotSupportedError') {
-            setStreamState(prev => ({
-              ...prev,
-              error: 'Stream format not supported. Please try a different station.',
-              isBuffering: false,
-              isConnected: false
-            }))
-            return
-          }
+        // Get stream URL with proper format
+        console.log('Setting audio source:', url)
+        audio.src = url
+
+        // Create and connect nodes in the correct order
+        if (sourceNodeRef.current) {
+          sourceNodeRef.current.disconnect()
         }
-        throw playError
-      }
+        sourceNodeRef.current = audioContext.createMediaElementSource(audio)
 
-      // Clear connection timeout on successful connection
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current)
-      }
+        // Ensure analyser exists
+        if (!analyserRef.current) {
+          analyserRef.current = createAnalyser()
+        }
 
-      setStreamState(prev => ({
-        ...prev,
-        isBuffering: false,
-        isConnected: true,
-        retryCount: 0,
-        error: undefined
-      }))
-      console.log('Stream connected successfully')
-
-    } catch (error) {
-      console.error('Stream connection error:', error)
-      
-      // Handle media format error
-      if (audioRef.current?.error?.code === 4) {
-        setStreamState(prev => ({
-          ...prev,
-          error: 'Stream format not supported. Please try a different station.',
-          isBuffering: false,
-          isConnected: false
-        }))
-        return
-      }
-
-      // Handle network errors with retry logic
-      if (streamState.retryCount < RETRY_ATTEMPTS) {
-        const delay = RETRY_DELAY * Math.pow(2, streamState.retryCount)
-        console.log(`Retrying connection in ${delay}ms (attempt ${streamState.retryCount + 1}/${RETRY_ATTEMPTS})`)
+        // Proper connection chain: source -> gain -> analyser -> destination
+        if (masterGain && analyserRef.current) {
+          console.log('Connecting audio nodes')
+          sourceNodeRef.current.connect(masterGain)
+          masterGain.connect(analyserRef.current)
+          analyserRef.current.connect(audioContext.destination)
+        } else {
+          // Fallback connection if nodes are missing
+          console.log('Fallback: Connecting source directly to destination')
+          sourceNodeRef.current.connect(audioContext.destination)
+        }
         
-        retryTimeoutRef.current = setTimeout(() => {
+        // Create a promise that resolves when the audio can play
+        const canPlayPromise = new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            console.log('Audio load timeout reached')
+            reject(new Error('Audio load timeout'))
+          }, 10000)
+
+          const handleCanPlay = () => {
+            console.log('Audio can play event received')
+            clearTimeout(timeoutId)
+            audio.removeEventListener('canplay', handleCanPlay)
+            audio.removeEventListener('error', handleError)
+            resolve(true)
+          }
+
+          const handleError = (e: Event) => {
+            const audioError = audio.error
+            console.error('Audio error during load:', {
+              error: e,
+              code: audioError?.code,
+              message: audioError?.message
+            })
+            clearTimeout(timeoutId)
+            audio.removeEventListener('canplay', handleCanPlay)
+            audio.removeEventListener('error', handleError)
+            reject(new Error(`Audio load failed: ${audioError?.message || 'Unknown error'}`))
+          }
+
+          audio.addEventListener('canplay', handleCanPlay)
+          audio.addEventListener('error', handleError)
+        })
+
+        // Load and wait for can play
+        console.log('Loading audio...')
+        await canPlayPromise
+        console.log('Audio loaded successfully')
+        
+        // Try to play
+        try {
+          console.log('Attempting to play...')
+          await audio.play()
+          console.log('Playback started successfully')
+
+          // Clear connection timeout on successful connection
+          if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current)
+          }
+
           setStreamState(prev => ({
             ...prev,
-            retryCount: prev.retryCount + 1
+            isBuffering: false,
+            isConnected: true,
+            error: undefined
           }))
-          connectToStream(url)
-        }, delay)
-      } else {
+
+        } catch (playError) {
+          console.error('Play error:', playError)
+          if (playError instanceof Error) {
+            if (playError.name === 'NotAllowedError') {
+              setStreamState(prev => ({
+                ...prev,
+                error: 'Playback not allowed. Please click again to start.',
+                isBuffering: false,
+                isConnected: false
+              }))
+              cleanup()
+              return
+            } else if (playError.name === 'NotSupportedError') {
+              setStreamState(prev => ({
+                ...prev,
+                error: 'Stream format not supported. Please try a different station.',
+                isBuffering: false,
+                isConnected: false
+              }))
+              cleanup()
+              return
+            }
+          }
+          throw playError
+        }
+
+      } catch (error) {
+        console.error('Stream connection error:', error)
         setStreamState(prev => ({
           ...prev,
-          error: 'Unable to connect to stream. Please try again later.',
+          error: error instanceof Error ? error.message : 'Failed to connect to stream',
           isBuffering: false,
           isConnected: false
         }))
+        cleanup()
       }
+
+    } catch (error) {
+      console.error('Stream setup error:', error)
+      setStreamState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to setup audio',
+        isBuffering: false,
+        isConnected: false
+      }))
+      cleanup()
     }
-  }, [cleanup, streamState.retryCount, audioContext, masterGain, createAnalyser, resumeContext])
+  }, [audioContext, masterGain, createAnalyser, resumeContext, cleanup])
 
   const disconnect = useCallback(() => {
     console.log('Disconnecting stream')
@@ -239,7 +221,8 @@ export function useRadioStream() {
     setStreamState({
       isBuffering: false,
       isConnected: false,
-      retryCount: 0
+      retryCount: 0,
+      error: undefined
     })
   }, [cleanup])
 
@@ -256,7 +239,9 @@ export function useRadioStream() {
   }, [cleanup])
 
   return {
-    ...streamState,
+    isConnected: streamState.isConnected,
+    isBuffering: streamState.isBuffering,
+    error: streamState.error,
     connectToStream,
     disconnect,
     setVolume,

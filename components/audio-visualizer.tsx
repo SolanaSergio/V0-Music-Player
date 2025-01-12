@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
+import type { AudioVisualizerProps, RippleEffect, VisualizerMode } from '@/types/audio'
 import {
   Select,
   SelectContent,
@@ -16,18 +17,26 @@ import {
   TooltipContent
 } from "@/components/ui/tooltip"
 import { visualizerModes, colorSchemes } from '@/config/visualizer'
-import type { AudioVisualizerProps, AnimationConfig, VisualizerMode } from '@/types/audio'
 import { 
   drawBars, 
   drawWave, 
   drawCircle, 
   updateRipples, 
   createRipple,
-  type RippleEffect
+  drawSpectrum,
+  drawParticles,
+  drawFrequency,
+  drawOrbit,
+  drawTerrain,
+  drawSpiral,
+  drawStarburst,
+  drawMatrix,
+  drawRings,
+  drawTunnel,
 } from '@/components/visualizers'
 
 // Animation configuration - kept static for now but could be made configurable via UI
-const DEFAULT_CONFIG: AnimationConfig = {
+const DEFAULT_CONFIG = {
   speed: 1,
   smoothing: 0.8,
   decay: 0.98,
@@ -94,19 +103,33 @@ export function AudioVisualizer({
   }, [interactive])
 
   useEffect(() => {
-    if (!canvasRef.current || !analyser) return
+    if (!canvasRef.current) return
+    
+    // Early return if no analyzer with clear error message
+    if (!analyser) {
+      console.warn('No analyzer node available for visualization')
+      return
+    }
 
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    if (!ctx) {
+      console.error('Could not get 2D context from canvas')
+      return
+    }
 
     // Set up high DPI canvas
     const setupCanvas = () => {
       const dpr = window.devicePixelRatio || 1
       const rect = canvas.getBoundingClientRect()
-      canvas.width = rect.width * dpr
-      canvas.height = rect.height * dpr
-      ctx.scale(dpr, dpr)
+      
+      // Only update if dimensions actually changed
+      if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+        canvas.width = rect.width * dpr
+        canvas.height = rect.height * dpr
+        ctx.scale(dpr, dpr)
+      }
+      
       return { width: rect.width, height: rect.height }
     }
 
@@ -116,8 +139,10 @@ export function AudioVisualizer({
     const fftSizes = { low: 128, medium: 256, high: 512 }
     analyser.fftSize = fftSizes[quality] * 2
     analyser.smoothingTimeConstant = DEFAULT_CONFIG.smoothing
+    analyser.minDecibels = -90
+    analyser.maxDecibels = -10
 
-    // Initialize reusable arrays
+    // Initialize or resize reusable arrays
     if (!dataArrayRef.current || dataArrayRef.current.length !== analyser.frequencyBinCount) {
       dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount)
     }
@@ -129,56 +154,96 @@ export function AudioVisualizer({
     
     // Drawing functions
     const drawVisualizer = () => {
-      if (!ctx || !analyser || !dataArrayRef.current || !timeDataArrayRef.current) return
-
-      // Clear with alpha for trails
-      ctx.fillStyle = `${scheme.background}${Math.floor(DEFAULT_CONFIG.blend * 255).toString(16).padStart(2, '0')}`
-      ctx.fillRect(0, 0, dimensions.width, dimensions.height)
-
-      // Get audio data
-      analyser.getByteFrequencyData(dataArrayRef.current)
-      analyser.getByteTimeDomainData(timeDataArrayRef.current)
-
-      const drawContext = {
-        ctx,
-        width: dimensions.width,
-        height: dimensions.height,
-        scheme,
-        sensitivity: sens
+      if (!ctx || !analyser || !dataArrayRef.current || !timeDataArrayRef.current) {
+        console.warn('Missing required resources for visualization')
+        return
       }
 
-      // Draw based on mode
-      switch (mode) {
-        case 'bars':
-          drawBars(ctx, dataArrayRef.current, drawContext)
-          break
-        case 'wave':
-          drawWave(ctx, timeDataArrayRef.current, drawContext)
-          break
-        case 'circle':
-          drawCircle(ctx, dataArrayRef.current, drawContext)
-          break
-      }
+      try {
+        // Clear with alpha for trails
+        ctx.fillStyle = `${scheme.background}${Math.floor(DEFAULT_CONFIG.blend * 255).toString(16).padStart(2, '0')}`
+        ctx.fillRect(0, 0, dimensions.width, dimensions.height)
 
-      // Update ripples if interactive
-      if (interactive) {
-        const avgFrequency = dataArrayRef.current.reduce((a, b) => a + b) / dataArrayRef.current.length
-        rippleRef.current = updateRipples(ctx, rippleRef.current, DEFAULT_CONFIG)
-        
-        if (mouseRef.current.pressed) {
-          rippleRef.current.push(
-            createRipple(
-              mouseRef.current.x,
-              mouseRef.current.y,
-              avgFrequency,
-              scheme,
-              DEFAULT_CONFIG.speed
+        // Get audio data
+        analyser.getByteFrequencyData(dataArrayRef.current)
+        analyser.getByteTimeDomainData(timeDataArrayRef.current)
+
+        const drawContext = {
+          ctx,
+          width: dimensions.width,
+          height: dimensions.height,
+          scheme,
+          sensitivity: sens
+        }
+
+        // Draw based on mode
+        switch (mode) {
+          case 'bars':
+            drawBars(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'wave':
+            drawWave(ctx, timeDataArrayRef.current, drawContext)
+            break
+          case 'circle':
+            drawCircle(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'spectrum':
+            drawSpectrum(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'particles':
+            drawParticles(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'frequency':
+            drawFrequency(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'orbit':
+            drawOrbit(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'terrain':
+            drawTerrain(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'spiral':
+            drawSpiral(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'starburst':
+            drawStarburst(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'matrix':
+            drawMatrix(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'rings':
+            drawRings(ctx, dataArrayRef.current, drawContext)
+            break
+          case 'tunnel':
+            drawTunnel(ctx, dataArrayRef.current, drawContext)
+            break
+        }
+
+        // Update ripples if interactive
+        if (interactive) {
+          const avgFrequency = dataArrayRef.current.reduce((a, b) => a + b) / dataArrayRef.current.length
+          rippleRef.current = updateRipples(ctx, rippleRef.current, DEFAULT_CONFIG)
+          
+          if (mouseRef.current.pressed) {
+            rippleRef.current.push(
+              createRipple(
+                mouseRef.current.x,
+                mouseRef.current.y,
+                avgFrequency,
+                scheme,
+                DEFAULT_CONFIG.speed
+              )
             )
-          )
+          }
+        }
+
+        animationRef.current = requestAnimationFrame(drawVisualizer)
+      } catch (error) {
+        console.error('Error in visualization loop:', error)
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current)
         }
       }
-
-      animationRef.current = requestAnimationFrame(drawVisualizer)
     }
 
     // Start animation
@@ -188,6 +253,7 @@ export function AudioVisualizer({
     const handleResize = () => {
       setupCanvas()
     }
+    
     window.addEventListener('resize', handleResize)
 
     return () => {

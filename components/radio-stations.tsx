@@ -90,8 +90,7 @@ export function RadioStations({ initialGenre = 'all' }: RadioStationsProps) {
                   <div className="relative">
                     <div className="aspect-video relative overflow-hidden">
                       <ImageLoader
-                        src={station.imageUrl}
-                        fallback={station.fallbackImage}
+                        src={station.image}
                         alt={station.name}
                         width={640}
                         height={360}

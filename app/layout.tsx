@@ -7,7 +7,9 @@ import { Header } from '@/components/header'
 import { MobileNav } from '@/components/mobile-nav'
 import { ClientLayout } from '@/components/client-layout'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { ErrorLogger } from '@/components/error-logger'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { AudioProvider } from '@/components/audio-provider'
 
 export const metadata: Metadata = {
   title: 'Music Streaming App',
@@ -35,39 +37,42 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={GeistSans.className} suppressHydrationWarning>
+        <ErrorLogger />
         <ErrorBoundary>
           <ClientLayout>
-            <Suspense fallback={<RootLoading />}>
-              <div className="relative flex h-screen overflow-hidden">
-                {/* Sidebar - Hidden on mobile */}
-                <Suspense fallback={
-                  <div className="hidden md:block w-[250px] bg-muted/20 animate-pulse" />
-                }>
-                  <Sidebar className="hidden md:block" />
-                </Suspense>
-
-                {/* Mobile Navigation */}
-                <Suspense fallback={null}>
-                  <MobileNav className="md:hidden" />
-                </Suspense>
-
-                {/* Main Content */}
-                <main className="flex-1 flex flex-col overflow-hidden bg-background/[0.02] backdrop-blur-[2px]">
+            <AudioProvider>
+              <Suspense fallback={<RootLoading />}>
+                <div className="relative flex h-screen overflow-hidden">
+                  {/* Sidebar - Hidden on mobile */}
                   <Suspense fallback={
-                    <div className="h-16 bg-muted/20 animate-pulse" />
+                    <div className="hidden md:block w-[250px] bg-muted/20 animate-pulse" />
                   }>
-                    <Header />
+                    <Sidebar className="hidden md:block" />
                   </Suspense>
 
-                  {/* Scrollable Content Area */}
-                  <div className="h-[calc(100vh-4rem)] overflow-y-auto pt-16 scrollbar-thin scrollbar-track-background/20 scrollbar-thumb-muted-foreground/10 hover:scrollbar-thumb-muted-foreground/20">
-                    <ErrorBoundary>
-                      {children}
-                    </ErrorBoundary>
-                  </div>
-                </main>
-              </div>
-            </Suspense>
+                  {/* Mobile Navigation */}
+                  <Suspense fallback={null}>
+                    <MobileNav className="md:hidden" />
+                  </Suspense>
+
+                  {/* Main Content */}
+                  <main className="flex-1 flex flex-col overflow-hidden bg-background/[0.02] backdrop-blur-[2px]">
+                    <Suspense fallback={
+                      <div className="h-16 bg-muted/20 animate-pulse" />
+                    }>
+                      <Header />
+                    </Suspense>
+
+                    {/* Scrollable Content Area */}
+                    <div className="h-[calc(100vh-4rem)] overflow-y-auto pt-16 scrollbar-thin scrollbar-track-background/20 scrollbar-thumb-muted-foreground/10 hover:scrollbar-thumb-muted-foreground/20">
+                      <ErrorBoundary>
+                        {children}
+                      </ErrorBoundary>
+                    </div>
+                  </main>
+                </div>
+              </Suspense>
+            </AudioProvider>
           </ClientLayout>
         </ErrorBoundary>
       </body>

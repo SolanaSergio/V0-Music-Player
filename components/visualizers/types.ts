@@ -8,16 +8,11 @@ export interface DrawContext {
   sensitivity: number
 }
 
-export interface Particle {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  size: number
-  color: string
-  life: number
-  maxLife: number
-}
+export type DrawFunction = (
+  ctx: CanvasRenderingContext2D,
+  data: Uint8Array,
+  context: DrawContext
+) => void
 
 export interface RippleEffect {
   x: number

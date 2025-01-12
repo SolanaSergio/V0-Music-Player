@@ -2,16 +2,27 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import { Play, AudioWaveformIcon as Waveform } from 'lucide-react'
+import { useRouter } from "next/navigation"
+import { Play, Radio } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { radioStations } from "@/data/radio-stations"
 
 export function HeroBanner() {
+  const router = useRouter()
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
     setIsVisible(true)
   }, [])
+
+  const handleStartListening = () => {
+    // Start with the first radio station
+    const firstStation = radioStations[0]
+    if (firstStation) {
+      router.push(`/player?station=${firstStation.id}`)
+    }
+  }
 
   return (
     <div className="relative h-[300px] sm:h-[400px] rounded-xl overflow-hidden">
@@ -42,12 +53,12 @@ export function HeroBanner() {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
       </div>
 
-      {/* Featured Album Artwork */}
+      {/* Featured Radio Image */}
       <div className="absolute top-1/2 right-[10%] -translate-y-1/2">
         <div className="relative h-48 w-48 sm:h-64 sm:w-64 transform rotate-12 transition-transform duration-1000 hover:rotate-[14deg]">
           <Image
-            src="https://images.unsplash.com/photo-1671726203638-83742a2721a1?q=80&w=2070&auto=format&fit=crop"
-            alt="Featured Album"
+            src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=800&q=80"
+            alt="Live Radio"
             width={800}
             height={800}
             className={cn(
@@ -69,22 +80,27 @@ export function HeroBanner() {
       )}>
         <div className="relative space-y-2 max-w-lg">
           <div className="flex items-center gap-2 text-primary/80">
-            <Waveform className="h-5 w-5 animate-pulse" />
-            <span className="text-sm font-medium">Featured Album</span>
+            <Radio className="h-5 w-5 animate-pulse" />
+            <span className="text-sm font-medium">Live Radio</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">
-            Discover Your Next Favorite Track
+            Stream Live Radio Worldwide
           </h2>
           <p className="text-muted-foreground max-w-[600px] text-sm sm:text-base">
-            Immerse yourself in a world of endless musical possibilities. Start your journey today.
+            Tune in to our curated collection of live radio stations. From lofi beats to classical symphonies, find your perfect station.
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <Button size="lg" className="group bg-primary/90 hover:bg-primary">
+          <Button size="lg" className="group bg-primary/90 hover:bg-primary" onClick={handleStartListening}>
             <Play className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" />
             Start Listening
           </Button>
-          <Button variant="outline" size="lg" className="bg-background/50 hover:bg-background/80">
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="bg-background/50 hover:bg-background/80"
+            onClick={() => document.getElementById('radio-stations')?.scrollIntoView({ behavior: 'smooth' })}
+          >
             Browse Stations
           </Button>
         </div>

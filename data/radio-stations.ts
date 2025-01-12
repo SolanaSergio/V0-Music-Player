@@ -1,59 +1,62 @@
-export interface RadioStation {
-  id: string
-  name: string
-  description: string
-  streamUrl: string
-  directStreamUrl?: string
-  format?: string
-  image: string
-  tags: string[]
-  isActive: boolean
-}
+import type { RadioStation } from '@/types/audio'
 
 export const radioStations: RadioStation[] = [
   {
-    id: 'lofi-beats',
+    id: 'lofi-girl',
     name: 'Lofi Girl',
-    description: 'Chill beats for studying and relaxing',
-    streamUrl: '/api/stream/lofi-beats',
-    directStreamUrl: 'https://play.streamafrica.net/lofiradio',
-    format: 'audio/aac',
-    image: '/images/stations/lofi-girl.jpg',
-    tags: ['lofi', 'beats', 'chill', 'study'],
-    isActive: true
+    description: 'Lo-fi beats to relax/study to',
+    genre: 'electronic',
+    image: 'https://images.unsplash.com/photo-1519682577862-22b62b24e493?w=800&h=800&q=80',
+    streamUrl: '/api/stream/lofi-girl',
+    directStreamUrl: 'https://ilm.stream35.radiohost.de/ilm_ilovechillhop_mp3-192',
+    format: 'audio/mp3',
+    bitrate: 192,
+    region: 'Global',
+    language: 'None',
+    isLive: true,
+    tags: ['lofi', 'beats', 'study', 'relax']
   },
   {
-    id: 'synthwave',
-    name: 'Synthwave Radio',
-    description: 'Retro synth vibes and electronic beats',
-    streamUrl: '/api/stream/synthwave',
-    directStreamUrl: 'http://stream.zeno.fm/f3wvbbqmdg8uv',
-    format: 'audio/mpeg',
-    image: '/images/stations/synthwave.jpg',
-    tags: ['synthwave', 'electronic', 'retro'],
-    isActive: true
+    id: 'classical-radio',
+    name: 'Classical Radio',
+    description: 'Classical music from the greatest composers',
+    genre: 'classical',
+    image: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=800&h=800&q=80',
+    streamUrl: 'https://streams.ilovemusic.de/iloveradio21.mp3',
+    format: 'audio/mp3',
+    bitrate: 128,
+    region: 'Global',
+    language: 'None',
+    isLive: true,
+    tags: ['classical', 'orchestra', 'symphony']
   },
   {
     id: 'jazz-cafe',
     name: 'Jazz Café',
-    description: 'Smooth jazz and coffee house vibes',
-    streamUrl: '/api/stream/jazz-cafe',
-    directStreamUrl: 'http://stream.zeno.fm/h59g4k7u7k8uv',
-    format: 'audio/mpeg',
-    image: '/images/stations/jazz-cafe.jpg',
-    tags: ['jazz', 'smooth', 'cafe'],
-    isActive: true
+    description: 'Smooth jazz for your coffee break',
+    genre: 'jazz',
+    image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=800&h=800&q=80',
+    streamUrl: 'https://streams.ilovemusic.de/iloveradio22.mp3',
+    format: 'audio/mp3',
+    bitrate: 128,
+    region: 'Global',
+    language: 'None',
+    isLive: true,
+    tags: ['jazz', 'smooth', 'cafe']
   },
   {
-    id: 'ambient',
-    name: 'Ambient Waves',
-    description: 'Atmospheric and ambient soundscapes',
-    streamUrl: '/api/stream/ambient',
-    directStreamUrl: 'http://stream.zeno.fm/d853t8qmdg8uv',
-    format: 'audio/mpeg',
-    image: '/images/stations/ambient.jpg',
-    tags: ['ambient', 'atmospheric', 'chill'],
-    isActive: true
+    id: 'ambient-sleep',
+    name: 'Ambient Sleep',
+    description: 'Ambient sounds for peaceful sleep',
+    genre: 'ambient',
+    image: 'https://images.unsplash.com/photo-1594623930572-300a3011d9ae?w=800&h=800&q=80',
+    streamUrl: 'https://streams.ilovemusic.de/iloveradio20.mp3',
+    format: 'audio/mp3',
+    bitrate: 128,
+    region: 'Global',
+    language: 'None',
+    isLive: true,
+    tags: ['ambient', 'sleep', 'relax']
   }
 ]
 
