@@ -114,8 +114,8 @@ export function useAudio(tracks: Track[], initialTrackIndex = 0) {
       audioRef.current.src = streamInfo.url
       audioRef.current.crossOrigin = 'anonymous'
       
-      // Set audio type hint
-      audioRef.current.type = 'audio/mpeg' // Default to MP3
+      // Set MIME type using preload instead of deprecated type property
+      audioRef.current.preload = 'auto'
       
       // Create a promise that resolves when the audio can play
       const canPlayPromise = new Promise((resolve, reject) => {
@@ -274,9 +274,8 @@ export function useAudio(tracks: Track[], initialTrackIndex = 0) {
     audioRef.current = new Audio()
     audioRef.current.crossOrigin = 'anonymous'
     audioRef.current.preload = 'auto'
-    audioRef.current.autobuffer = true
-    audioRef.current.mozPreservesPitch = false
-    audioRef.current.playbackRate = 1.0
+    audioRef.current.preservesPitch = true
+    audioRef.current.volume = volume
 
     return () => {
       if (connectionTimeoutRef.current) {
@@ -298,7 +297,7 @@ export function useAudio(tracks: Track[], initialTrackIndex = 0) {
       }
       isInitialized.current = false
     }
-  }, [])
+  }, [volume])
 
   // Handle track changes and audio events
   useEffect(() => {

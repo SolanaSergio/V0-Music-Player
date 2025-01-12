@@ -1,64 +1,60 @@
 interface StreamResponse {
   url: string;
-  format: string;
-  bitrate?: number;
+  format?: string;
 }
 
 export async function getStreamUrl(url: string): Promise<StreamResponse> {
-  if (!url) {
-    throw new Error('No stream URL provided');
-  }
-
+  console.log('Getting stream URL for:', url)
+  
   try {
-    // Try direct GET request first
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'audio/mpeg,audio/aac,audio/ogg,audio/*',
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Stream not available');
+    // First try a HEAD request to check CORS and get content type
+    const headResponse = await fetch(url, { 
+      method: 'HEAD',
+      mode: 'cors'
+    })
+    
+    console.log('HEAD response status:', headResponse.status)
+    console.log('Content-Type:', headResponse.headers.get('content-type'))
+    
+    if (!headResponse.ok) {
+      console.log('HEAD request failed, trying direct stream')
+      // If HEAD fails, try direct stream URL
+      return { url }
     }
 
-    // Get content type from response headers
-    const contentType = response.headers.get('content-type') || 'audio/mpeg';
-
-    return {
-      url,
-      format: contentType
-    };
-  } catch (error) {
-    console.error('Stream connection error:', error);
-
-    // Try with CORS proxy as fallback
-    try {
-      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-      const proxyUrl = corsProxy + url;
-
-      const response = await fetch(proxyUrl, {
-        headers: {
-          'Accept': 'audio/mpeg,audio/aac,audio/ogg,audio/*',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Stream not available');
-      }
-
-      return {
-        url: proxyUrl,
-        format: response.headers.get('content-type') || 'audio/mpeg'
-      };
-    } catch (proxyError) {
-      console.error('CORS proxy connection error:', proxyError);
-
-      // Return original URL as fallback
-      return {
+    const contentType = headResponse.headers.get('content-type')
+    
+    // Check if it's an audio stream
+    if (contentType && contentType.includes('audio')) {
+      console.log('Valid audio stream detected')
+      return { 
         url,
-        format: 'audio/mpeg'
-      };
+        format: contentType 
+      }
     }
+    
+    // If not audio content type, try to get redirect URL
+    const response = await fetch(url, { 
+      mode: 'cors'
+    })
+    
+    console.log('GET response status:', response.status)
+    
+    if (response.redirected) {
+      console.log('Stream URL redirected to:', response.url)
+      return { 
+        url: response.url,
+        format: response.headers.get('content-type') || undefined
+      }
+    }
+    
+    // If no redirect, return original URL
+    return { url }
+    
+  } catch (error) {
+    console.error('Error getting stream URL:', error)
+    // On error, return original URL and let audio element handle it
+    return { url }
   }
 }
 
@@ -68,34 +64,17 @@ export async function checkStreamStatus(url: string): Promise<boolean> {
   }
 
   try {
-    // Try direct GET request first
     const response = await fetch(url, {
+      method: 'GET',
       headers: {
-        'Accept': 'audio/mpeg,audio/aac,audio/ogg,audio/*',
+        'Accept': 'audio/*'
       }
     });
 
     return response.ok;
   } catch (error) {
-    console.error('Stream status check error:', error);
-
-    // Try with CORS proxy as fallback
-    try {
-      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-      const proxyUrl = corsProxy + url;
-
-      const response = await fetch(proxyUrl, {
-        headers: {
-          'Accept': 'audio/mpeg,audio/aac,audio/ogg,audio/*',
-        }
-      });
-
-      return response.ok;
-    } catch (proxyError) {
-      console.error('CORS proxy status check error:', proxyError);
-      // Return true as fallback since some streams don't support HEAD/GET checks
-      return true;
-    }
+    console.log('Stream status check failed:', error);
+    return false;
   }
 }
 

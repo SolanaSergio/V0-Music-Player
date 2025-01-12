@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -10,9 +9,25 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import {
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent
+} from "@/components/ui/tooltip"
 import { visualizerModes, colorSchemes } from '@/config/visualizer'
-import type { AudioVisualizerProps, RippleEffect, AnimationConfig } from '@/types/audio'
+import type { AudioVisualizerProps, RippleEffect, AnimationConfig, VisualizerMode, ColorScheme } from '@/types/audio'
+
+interface Particle {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  size: number
+  color: string
+  life: number
+  maxLife: number
+}
 
 export function AudioVisualizer({ 
   analyser,
@@ -27,6 +42,8 @@ export function AudioVisualizer({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number>()
   const rippleRef = useRef<RippleEffect[]>([])
+  const particlesRef = useRef<Particle[]>([])
+  const matrixRef = useRef<number[]>([])
   const mouseRef = useRef({ x: 0, y: 0, pressed: false })
   const [mode, setMode] = useState(visualizerMode)
   const [colors, setColors] = useState(colorScheme)
@@ -222,17 +239,35 @@ export function AudioVisualizer({
 
       const avgFrequency = dataArray.reduce((a, b) => a + b) / bufferLength
 
-      particlesRef.current.forEach((particle, i) => {
+      // Initialize particles if needed
+      if (particlesRef.current.length === 0) {
+        const particleCount = 100
+        particlesRef.current = Array.from({ length: particleCount }, () => ({
+          x: Math.random() * WIDTH,
+          y: Math.random() * HEIGHT,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2,
+          size: Math.random() * 3 + 1,
+          color: scheme.colors[Math.floor(Math.random() * scheme.colors.length)],
+          life: 100,
+          maxLife: 100
+        }))
+      }
+
+      // Update and draw particles
+      particlesRef.current.forEach((particle) => {
         const speed = (avgFrequency / 255) * sens
         particle.x += particle.vx * speed
         particle.y += particle.vy * speed
 
+        // Bounce off walls
         if (particle.x < 0 || particle.x > WIDTH) particle.vx *= -1
         if (particle.y < 0 || particle.y > HEIGHT) particle.vy *= -1
 
+        // Draw particle
         ctx.beginPath()
-        ctx.arc(particle.x, particle.y, avgFrequency / 30, 0, Math.PI * 2)
-        ctx.fillStyle = getColor(avgFrequency, i, particlesRef.current.length)
+        ctx.arc(particle.x, particle.y, particle.size * (avgFrequency / 255), 0, Math.PI * 2)
+        ctx.fillStyle = particle.color
         ctx.fill()
       })
     }
@@ -373,11 +408,11 @@ export function AudioVisualizer({
       const avgFrequency = dataArray.reduce((a, b) => a + b) / bufferLength
 
       if (mouseRef.current.pressed) {
-        const burst = {
+        const burst: Particle = {
           x: mouseRef.current.x,
           y: mouseRef.current.y,
-          vx: 0,
-          vy: 0,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4,
           size: avgFrequency / 10,
           color: scheme.colors[Math.floor(Math.random() * scheme.colors.length)],
           life: 100,
@@ -386,15 +421,16 @@ export function AudioVisualizer({
         particlesRef.current.push(burst)
       }
 
-      particlesRef.current = particlesRef.current.filter(particle => {
+      // Update and draw particles
+      particlesRef.current = particlesRef.current.filter((particle) => {
         particle.life -= 1
         particle.size *= 0.99
-        particle.x += (Math.random() - 0.5) * avgFrequency / 10
-        particle.y += (Math.random() - 0.5) * avgFrequency / 10
+        particle.x += particle.vx
+        particle.y += particle.vy
 
         ctx.beginPath()
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
-        ctx.fillStyle = particle.color
+        ctx.fillStyle = particle.color + Math.floor((particle.life / particle.maxLife) * 255).toString(16).padStart(2, '0')
         ctx.fill()
 
         return particle.life > 0
@@ -419,8 +455,9 @@ export function AudioVisualizer({
       const fontSize = 14
       const columns = Math.floor(WIDTH / fontSize)
       
-      if (!ctx.matrix) {
-        ctx.matrix = Array(columns).fill(0)
+      // Initialize matrix positions if needed
+      if (matrixRef.current.length === 0) {
+        matrixRef.current = Array(columns).fill(0)
       }
 
       analyser.getByteFrequencyData(dataArray)
@@ -436,14 +473,14 @@ export function AudioVisualizer({
       for (let i = 0; i < columns; i++) {
         const char = String.fromCharCode(Math.random() * 128)
         const x = i * fontSize
-        const y = ctx.matrix[i] * fontSize
+        const y = matrixRef.current[i] * fontSize
 
         ctx.fillText(char, x, y)
 
         if (y > HEIGHT && Math.random() > 0.975) {
-          ctx.matrix[i] = 0
+          matrixRef.current[i] = 0
         } else {
-          ctx.matrix[i] += speed
+          matrixRef.current[i] += speed
         }
       }
     }
@@ -641,101 +678,73 @@ export function AudioVisualizer({
           ref={canvasRef}
           className={className}
         />
-        <div className="absolute bottom-4 right-4 flex flex-wrap items-center gap-2">
+        <div className="absolute bottom-4 left-4 right-4 flex items-center gap-4 bg-background/80 backdrop-blur-sm rounded-lg p-2">
           <TooltipRoot>
             <TooltipTrigger asChild>
-              <Select value={mode} onValueChange={(value: any) => setMode(value)}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {visualizerModes.map(visualizer => (
-                    <SelectItem key={visualizer.id} value={visualizer.id}>
-                      <div className="flex items-center">
-                        <visualizer.icon className="mr-2 h-4 w-4" />
-                        {visualizer.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {currentMode?.description}
-              {currentMode?.interactive && " (Interactive)"}
-            </TooltipContent>
-          </TooltipRoot>
-
-          <TooltipRoot>
-            <TooltipTrigger asChild>
-              <Select value={colors} onValueChange={(value: any) => setColors(value)}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {colorSchemes.map(scheme => (
-                    <SelectItem key={scheme.id} value={scheme.id}>
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-4 items-center gap-px">
-                          {scheme.colors.map((color, i) => (
-                            <div
-                              key={i}
-                              className="h-full w-1"
-                              style={{ backgroundColor: color }}
-                            />
-                          ))}
-                        </div>
-                        {scheme.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              Color scheme
-            </TooltipContent>
-          </TooltipRoot>
-
-          <TooltipRoot>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-2">
-                <Slider
-                  value={[sens]}
-                  min={0.5}
-                  max={2.5}
-                  step={0.1}
-                  className="w-[100px]"
-                  onValueChange={([value]) => setSens(value)}
-                />
-                <span className="text-xs tabular-nums">
-                  {sens.toFixed(1)}x
-                </span>
+              <div>
+                <Select 
+                  value={mode} 
+                  onValueChange={(value: VisualizerMode['id']) => setMode(value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {visualizerModes.map((mode) => (
+                      <SelectItem key={mode.id} value={mode.id}>
+                        {mode.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="top">
-              Sensitivity
+            <TooltipContent>
+              <p>Visualization mode</p>
+            </TooltipContent>
+          </TooltipRoot>
+
+          <TooltipRoot>
+            <TooltipTrigger asChild>
+              <div>
+                <Select 
+                  value={colors} 
+                  onValueChange={(value: string) => setColors(value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select colors" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colorSchemes.map((scheme) => (
+                      <SelectItem key={scheme.id} value={scheme.id}>
+                        {scheme.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Color scheme</p>
             </TooltipContent>
           </TooltipRoot>
 
           <TooltipRoot>
             <TooltipTrigger asChild>
               <div className="flex items-center gap-2">
+                <span className="text-sm">Sensitivity</span>
                 <Slider
-                  value={[config.speed]}
+                  value={[sens]}
                   min={0.1}
                   max={3}
                   step={0.1}
-                  className="w-[100px]"
-                  onValueChange={([value]) => setConfig(prev => ({ ...prev, speed: value }))}
+                  onValueChange={([value]) => setSens(value)}
+                  className="w-32"
                 />
-                <span className="text-xs tabular-nums">
-                  {config.speed.toFixed(1)}x
-                </span>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="top">
-              Animation Speed
+            <TooltipContent>
+              <p>Adjust visualization sensitivity</p>
             </TooltipContent>
           </TooltipRoot>
         </div>

@@ -38,7 +38,7 @@ export const radioStations: RadioStation[] = [
     genre: 'electronic',
     imageUrl: 'https://images.unsplash.com/photo-1519682577862-22b62b24e493?w=800&h=800&q=80',
     fallbackImage: '/images/genres/electronic.jpg',
-    streamUrl: 'https://play.streamafrica.net/lofiradio',
+    streamUrl: 'https://stream.zeno.fm/fyn8eh3h5f8uv',
     description: 'Lo-fi beats to relax/study to.',
     isLive: true,
     tags: ['lofi', 'beats', 'chill']

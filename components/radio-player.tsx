@@ -16,25 +16,68 @@ interface RadioPlayerProps {
 export function RadioPlayer({ station, className }: RadioPlayerProps) {
   const [volume, setVolume] = useState(1)
   const { streamState, connect, disconnect, setVolume: setStreamVolume } = useRadioStream()
+  const [audioContextError, setAudioContextError] = useState<string>('')
 
+  // Initialize audio context and connect to stream
   useEffect(() => {
-    if (station) {
-      connect(station.streamUrl)
+    let audioContext: AudioContext | null = null;
+    
+    const initAudio = async () => {
+      try {
+        console.log('Initializing audio for station:', station.name)
+        
+        // Only create audio context if not already exists
+        if (!audioContext) {
+          const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+          audioContext = new AudioContext()
+          console.log('Created new AudioContext, state:', audioContext.state)
+        }
+        
+        if (audioContext.state === 'suspended') {
+          console.log('Resuming audio context...')
+          await audioContext.resume()
+          console.log('Audio context resumed, state:', audioContext.state)
+        }
+        
+        console.log('Audio context initialized, connecting to stream...')
+        await connect(station.streamUrl)
+        console.log('Stream connection initiated')
+      } catch (error) {
+        console.error('Failed to initialize audio:', error)
+        setAudioContextError(error instanceof Error ? error.message : 'Failed to initialize audio')
+      }
     }
+
+    if (station) {
+      initAudio()
+    }
+
     return () => {
+      console.log('Cleaning up audio...')
+      if (audioContext) {
+        audioContext.close()
+        audioContext = null
+      }
       disconnect()
     }
   }, [station, connect, disconnect])
 
   useEffect(() => {
+    console.log('Setting volume:', volume)
     setStreamVolume(volume)
   }, [volume, setStreamVolume])
 
-  const togglePlayback = () => {
-    if (streamState.isConnected) {
-      disconnect()
-    } else {
-      connect(station.streamUrl)
+  const togglePlayback = async () => {
+    try {
+      console.log('Toggle playback, current state:', streamState.isConnected)
+      if (streamState.isConnected) {
+        disconnect()
+      } else {
+        connect(station.streamUrl)
+      }
+    } catch (error) {
+      console.error('Playback toggle error:', error)
+      setAudioContextError(error instanceof Error ? error.message : 'Playback failed')
     }
   }
 
@@ -97,8 +140,8 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
         </div>
       </div>
 
-      {streamState.error && (
-        <p className="text-sm text-destructive">{streamState.error}</p>
+      {(streamState.error || audioContextError) && (
+        <p className="text-sm text-destructive">{streamState.error || audioContextError}</p>
       )}
     </div>
   )
