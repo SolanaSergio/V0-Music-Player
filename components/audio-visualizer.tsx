@@ -62,6 +62,19 @@ export function AudioVisualizer({
   const dataArrayRef = useRef<Uint8Array>()
   const timeDataArrayRef = useRef<Uint8Array>()
   
+  // Update state when props change
+  useEffect(() => {
+    setMode(visualizerMode)
+  }, [visualizerMode])
+
+  useEffect(() => {
+    setColors(colorScheme)
+  }, [colorScheme])
+
+  useEffect(() => {
+    setSens(sensitivity)
+  }, [sensitivity])
+
   const [mode, setMode] = useState(visualizerMode)
   const [colors, setColors] = useState(colorScheme)
   const [sens, setSens] = useState(sensitivity)
@@ -217,10 +230,29 @@ export function AudioVisualizer({
           case 'tunnel':
             drawTunnel(ctx, dataArrayRef.current, drawContext)
             break
+          case 'ripple':
+            // Update and draw ripples
+            rippleRef.current = updateRipples(ctx, rippleRef.current, DEFAULT_CONFIG)
+            if (mouseRef.current.pressed && interactive) {
+              const avgFrequency = dataArrayRef.current.reduce((a, b) => a + b) / dataArrayRef.current.length
+              rippleRef.current.push(
+                createRipple(
+                  mouseRef.current.x,
+                  mouseRef.current.y,
+                  avgFrequency,
+                  scheme,
+                  DEFAULT_CONFIG.speed
+                )
+              )
+            }
+            break
+          default:
+            console.warn(`Unknown visualizer mode: ${mode}`)
+            drawBars(ctx, dataArrayRef.current, drawContext) // Fallback to bars
         }
 
-        // Update ripples if interactive
-        if (interactive) {
+        // Only add interactive ripples if not in ripple mode
+        if (mode !== 'ripple' && interactive) {
           const avgFrequency = dataArrayRef.current.reduce((a, b) => a + b) / dataArrayRef.current.length
           rippleRef.current = updateRipples(ctx, rippleRef.current, DEFAULT_CONFIG)
           

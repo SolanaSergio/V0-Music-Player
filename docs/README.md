@@ -9,6 +9,8 @@
 - `prompt-guide.md` - Guide for writing effective prompts
 - `development-workflow.md` - Development processes and best practices
 - `architecture-patterns.md` - Architectural patterns and development context
+- `audio-system.md` - Audio processing and streaming architecture
+- `visualizers.md` - Audio visualization implementation and customization
 
 ## Quick Links
 - [Project Structure](./project-structure.md)
@@ -19,6 +21,8 @@
 - [Prompt Guide](./prompt-guide.md)
 - [Development Workflow](./development-workflow.md)
 - [Architecture Patterns](./architecture-patterns.md)
+- [Audio System](./audio-system.md)
+- [Visualizers](./visualizers.md)
 
 ## Documentation Purpose
 This documentation is maintained to:
@@ -30,6 +34,8 @@ This documentation is maintained to:
 6. Guide effective communication and prompts
 7. Establish consistent development practices
 8. Define architectural patterns and conventions
+9. Detail audio processing implementation
+10. Guide visualizer customization
 
 ## Using This Documentation
 1. **New Issues**: Start with `debugging-log.md`
@@ -38,6 +44,8 @@ This documentation is maintained to:
 4. **Project Overview**: See `project-structure.md`
 5. **Package Issues**: Consult `dependencies.md`
 6. **Architecture Decisions**: Review `architecture-patterns.md`
+7. **Audio System**: Reference `audio-system.md`
+8. **Visualizers**: Check `visualizers.md`
 
 ## Documentation Categories
 
@@ -59,7 +67,22 @@ This documentation is maintained to:
 - State management
 - Performance considerations
 
-### 4. Communication
+### 4. Audio System
+- Audio context management
+- Stream processing
+- Error handling
+- Browser compatibility
+- Volume control
+- Performance optimization
+
+### 5. Visualizers
+- Available modes
+- Customization options
+- Performance tips
+- Theme integration
+- Implementation details
+
+### 6. Communication
 - Prompt guidelines
 - Issue reporting
 - Documentation standards

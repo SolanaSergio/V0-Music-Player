@@ -175,7 +175,12 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
             <span className="text-sm font-medium">Mode:</span>
             <Select
               value={visualizerMode}
-              onValueChange={(value: VisualizerMode['id']) => setVisualizerMode(value)}
+              onValueChange={(value: VisualizerMode['id']) => {
+                const mode = visualizerModes.find(m => m.id === value)
+                if (mode) {
+                  setVisualizerMode(value)
+                }
+              }}
             >
               <SelectTrigger className="w-[140px]">
                 <SelectValue />
@@ -194,7 +199,12 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
             <span className="text-sm font-medium">Theme:</span>
             <Select
               value={colorScheme}
-              onValueChange={(value: ColorScheme['id']) => setColorScheme(value)}
+              onValueChange={(value: ColorScheme['id']) => {
+                const scheme = colorSchemes.find(s => s.id === value)
+                if (scheme) {
+                  setColorScheme(value)
+                }
+              }}
             >
               <SelectTrigger className="w-[140px]">
                 <SelectValue />
