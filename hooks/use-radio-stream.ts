@@ -176,9 +176,9 @@ export function useRadioStream(): UseRadioStreamReturn {
     reconnectCountRef.current = 0
     initialLoadingRef.current = true
 
-    // Reset stream state
+    // Reset stream state without showing buffering
     setStreamState({
-      isBuffering: true,
+      isBuffering: false,
       isConnected: false,
       error: undefined
     })
@@ -304,10 +304,10 @@ export function useRadioStream(): UseRadioStreamReturn {
   // Event handlers for audio element
   const handleLoadStart = useCallback(() => {
     const audio = audioRef.current
-    // Only show buffering on initial load and when not paused
+    // Only show buffering on initial load and when actively trying to connect
     setStreamState(prev => ({
       ...prev,
-      isBuffering: !audio?.paused,
+      isBuffering: !audio?.paused && !prev.isConnected,
       error: undefined
     }))
   }, [])
