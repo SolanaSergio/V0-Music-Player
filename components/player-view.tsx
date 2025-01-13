@@ -59,7 +59,6 @@ export function PlayerView() {
   const [volume, setVolume] = useState(0.8)
   const [isShuffle, setIsShuffle] = useState(false)
   const [repeatMode, setRepeatMode] = useState<'none' | 'all' | 'one'>('none')
-  const [progress, setProgress] = useState(0)
   const [queue, setQueue] = useState(featuredTracks)
   const [currentVisualizer, setCurrentVisualizer] = useState(visualizerModes[0])
   const [currentColorScheme, setCurrentColorScheme] = useState(colorSchemes[0])
@@ -128,14 +127,16 @@ export function PlayerView() {
               <ChevronDown className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Now Playing</h1>
-              <p className="text-muted-foreground">{currentTrack.title} • {currentTrack.artist}</p>
+              <h1 className="text-2xl font-bold">{currentTrack.title}</h1>
+              <p className="text-muted-foreground">
+                {currentTrack.isLive ? 'Now Playing' : currentTrack.artist}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Player Section */}
-        <div className="flex-1 flex flex-col items-center justify-between gap-8 max-w-5xl mx-auto w-full">
+        <div className="flex-1 flex flex-col items-center justify-start gap-3 max-w-5xl mx-auto w-full">
           {/* Visualizer */}
           <motion.div
             layout
@@ -233,35 +234,15 @@ export function PlayerView() {
             </div>
           </motion.div>
 
-          {/* Progress Bar */}
-          <motion.div
-            className="w-full max-w-3xl space-y-1.5"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Slider
-              value={[progress]}
-              max={100}
-              step={0.1}
-              className="w-full"
-              onValueChange={([value]) => setProgress(value)}
-            />
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>1:23</span>
-              <span>3:45</span>
-            </div>
-          </motion.div>
-
           {/* Controls */}
           <motion.div
-            className="space-y-4 w-full max-w-lg"
+            className="w-full max-w-3xl space-y-6 mt-3.5"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
             {/* Main Controls */}
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-6">
               <Button
                 variant="ghost"
                 size="icon"
@@ -359,7 +340,7 @@ export function PlayerView() {
             </div>
 
             {/* Secondary Controls */}
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-4">
               <Button
                 variant="ghost"
                 size="icon"
@@ -495,6 +476,14 @@ export function PlayerView() {
         }
         .animate-grid-flow {
           animation: grid-flow 20s linear infinite;
+        }
+        @keyframes radioWave {
+          0% {
+            transform: scaleY(0.2);
+          }
+          100% {
+            transform: scaleY(1);
+          }
         }
       `}</style>
     </div>

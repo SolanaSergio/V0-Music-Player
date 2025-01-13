@@ -35,6 +35,7 @@ export interface Track {
   genre: string
   image: string
   audioUrl: string
+  isLive?: boolean
 }
 
 export interface AudioState {
