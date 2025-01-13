@@ -10,10 +10,14 @@ interface Symbol {
   color: string
 }
 
-const symbols: Symbol[] = []
-const maxSymbols = 300
-const symbolSize = 14
-const possibleChars = '0123456789ABCDEF'
+const symbolSize = 20
+const maxSymbols = 200
+let symbols: Symbol[] = []
+
+const getRandomSymbol = () => {
+  const chars = '0123456789ABCDEF'
+  return chars[Math.floor(Math.random() * chars.length)]
+}
 
 export const drawMatrix = (
   ctx: CanvasRenderingContext2D,
@@ -21,92 +25,73 @@ export const drawMatrix = (
   { width, height, scheme, sensitivity }: DrawContext
 ) => {
   const columns = Math.floor(width / symbolSize)
-  const rows = Math.floor(height / symbolSize)
+  const avgFrequency = getAverageFrequency(data, sensitivity)
+
+  // Clear canvas with solid background
+  ctx.fillStyle = scheme.background || '#000000'
+  ctx.fillRect(0, 0, width, height)
 
   // Update existing symbols
-  for (let i = symbols.length - 1; i >= 0; i--) {
-    const symbol = symbols[i]
-    symbol.y += symbol.speed
-    symbol.opacity -= 0.005
+  symbols = symbols.filter(symbol => {
+    // Calculate frequency index and normalized value based on x position
+    const symbolFreqIndex = Math.floor((symbol.x / width) * data.length)
+    const symbolNormalizedValue = applySensitivity(data[symbolFreqIndex], sensitivity)
 
+    // Update position and properties
+    symbol.y += symbol.speed * (1 + symbolNormalizedValue)
+    symbol.opacity = Math.max(0, symbol.opacity - (0.005 + avgFrequency * 0.005))
+    
     // Randomly change symbol value
-    if (Math.random() < 0.1) {
-      symbol.value = possibleChars[Math.floor(Math.random() * possibleChars.length)]
+    if (Math.random() < 0.05) {
+      symbol.value = getRandomSymbol()
     }
+    
+    return symbol.opacity > 0 && symbol.y < height
+  })
 
-    // Remove symbols that are off screen or faded
-    if (symbol.y > height || symbol.opacity <= 0 || symbol.y > rows * symbolSize) {
-      symbols.splice(i, 1)
-    }
-  }
-
-  // Create new symbols based on frequency data
-  const avgFrequency = getAverageFrequency(data, sensitivity)
-  const spawnCount = Math.floor(avgFrequency * 5)
-
+  // Create new symbols based on frequency
+  const spawnCount = Math.floor(avgFrequency * 8)
   for (let i = 0; i < spawnCount && symbols.length < maxSymbols; i++) {
-    const freqIndex = Math.floor(Math.random() * data.length)
+    const x = Math.floor(Math.random() * columns) * symbolSize
+    const freqIndex = Math.floor((x / width) * data.length)
     const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
     
     symbols.push({
-      x: Math.floor(Math.random() * columns) * symbolSize,
-      y: -symbolSize,
-      value: possibleChars[Math.floor(Math.random() * possibleChars.length)],
-      speed: 1 + normalizedValue * 5,
-      opacity: 0.8 + Math.random() * 0.2,
+      x,
+      y: 0,
+      value: getRandomSymbol(),
+      speed: 2 + (normalizedValue * 4),
+      opacity: 0.9,
       color: scheme.colors[Math.floor(Math.random() * scheme.colors.length)]
     })
   }
 
-  // Clear canvas with fade effect
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
-  ctx.fillRect(0, 0, width, height)
-
-  // Draw symbols
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.font = `${symbolSize}px monospace`
-
+  // Draw symbols with enhanced effects
+  ctx.save()
   symbols.forEach(symbol => {
-    // Create gradient for each symbol
+    const symbolFreqIndex = Math.floor((symbol.x / width) * data.length)
+    const symbolNormalizedValue = applySensitivity(data[symbolFreqIndex], sensitivity)
+    
+    // Create gradient for trailing effect
     const gradient = ctx.createLinearGradient(
-      symbol.x,
-      symbol.y - symbolSize,
-      symbol.x,
-      symbol.y + symbolSize
+      symbol.x, symbol.y - symbolSize * 2,
+      symbol.x, symbol.y
     )
     gradient.addColorStop(0, `${symbol.color}00`)
-    gradient.addColorStop(0.5, `${symbol.color}${Math.floor(symbol.opacity * 255).toString(16).padStart(2, '0')}`)
-    gradient.addColorStop(1, `${symbol.color}33`)
-
-    ctx.fillStyle = gradient
-
-    // Add glow effect based on frequency
-    if (avgFrequency > 0.6) {
+    gradient.addColorStop(1, `${symbol.color}${Math.floor(symbol.opacity * 255).toString(16).padStart(2, '0')}`)
+    
+    // Apply glow effect based on frequency
+    if (symbolNormalizedValue > 0.4) {
       ctx.shadowColor = symbol.color
-      ctx.shadowBlur = 10 * avgFrequency
-      ctx.fillText(symbol.value, symbol.x + symbolSize/2, symbol.y)
-      ctx.shadowBlur = 0
+      ctx.shadowBlur = 10 * symbolNormalizedValue * symbol.opacity
     } else {
-      ctx.fillText(symbol.value, symbol.x + symbolSize/2, symbol.y)
+      ctx.shadowBlur = 0
     }
-  })
-
-  // Draw frequency bars in background
-  const barWidth = width / data.length
-  ctx.globalAlpha = 0.1
-  
-  for (let i = 0; i < data.length; i++) {
-    const normalizedValue = applySensitivity(data[i], sensitivity)
-    const barHeight = height * normalizedValue * 0.5
-
-    const gradient = ctx.createLinearGradient(0, height - barHeight, 0, height)
-    gradient.addColorStop(0, `${scheme.colors[0]}00`)
-    gradient.addColorStop(1, scheme.colors[0])
-
+    
+    ctx.font = `${symbolSize}px monospace`
+    ctx.textAlign = 'center'
     ctx.fillStyle = gradient
-    ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight)
-  }
-  
-  ctx.globalAlpha = 1.0
+    ctx.fillText(symbol.value, symbol.x + symbolSize / 2, symbol.y)
+  })
+  ctx.restore()
 } 

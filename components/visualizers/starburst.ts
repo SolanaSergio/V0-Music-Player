@@ -2,15 +2,17 @@ import type { DrawContext } from '@/components/visualizers/types'
 import { applySensitivity, getAverageFrequency } from './utils'
 
 interface Star {
+  x: number
+  y: number
   angle: number
-  length: number
   speed: number
-  color: string
+  length: number
   opacity: number
+  color: string
 }
 
-const stars: Star[] = []
-const maxStars = 100
+const maxStars = 150
+let stars: Star[] = []
 
 export const drawStarburst = (
   ctx: CanvasRenderingContext2D,
@@ -19,94 +21,115 @@ export const drawStarburst = (
 ) => {
   const centerX = width / 2
   const centerY = height / 2
+  // Adjust frequency sensitivity
+  const smoothedSensitivity = Math.sqrt(sensitivity) * 0.8
+  const avgFrequency = getAverageFrequency(data, smoothedSensitivity)
   const maxLength = Math.min(width, height) * 0.5
 
+  // Clear canvas with solid background
+  ctx.fillStyle = scheme.background || '#000000'
+  ctx.fillRect(0, 0, width, height)
+
   // Update existing stars
-  for (let i = stars.length - 1; i >= 0; i--) {
-    const star = stars[i]
-    star.length += star.speed
-    star.opacity -= 0.01
+  stars = stars.filter(star => {
+    // Update position
+    star.x = centerX + Math.cos(star.angle) * star.length
+    star.y = centerY + Math.sin(star.angle) * star.length
+    
+    // Update length and opacity with smoother decay
+    star.length += star.speed * (1 + avgFrequency)
+    star.opacity *= 0.98 - (avgFrequency * 0.01)
+    
+    return star.opacity > 0.1 && star.length < maxLength
+  })
 
-    // Remove stars that are too long or faded
-    if (star.length > maxLength || star.opacity <= 0) {
-      stars.splice(i, 1)
-    }
-  }
-
-  // Create new stars based on frequency data
-  const avgFrequency = getAverageFrequency(data, sensitivity)
-  const spawnCount = Math.floor(avgFrequency * 3)
-
+  // Create new stars based on audio intensity
+  const spawnCount = Math.floor(avgFrequency * 8 * smoothedSensitivity)
   for (let i = 0; i < spawnCount && stars.length < maxStars; i++) {
     const freqIndex = Math.floor(Math.random() * data.length)
-    const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
+    const normalizedValue = applySensitivity(data[freqIndex], smoothedSensitivity)
     
     stars.push({
+      x: centerX,
+      y: centerY,
       angle: Math.random() * Math.PI * 2,
+      speed: 2 + (normalizedValue * 4 * smoothedSensitivity),
       length: 0,
-      speed: 2 + normalizedValue * 8,
-      color: scheme.colors[Math.floor(Math.random() * scheme.colors.length)],
-      opacity: 0.8 + Math.random() * 0.2
+      opacity: 0.8 + (normalizedValue * 0.2),
+      color: scheme.colors[Math.floor(Math.random() * scheme.colors.length)]
     })
   }
 
-  // Draw background glow
-  if (avgFrequency > 0.5) {
-    const glowRadius = maxLength * avgFrequency
-    const glow = ctx.createRadialGradient(
+  // Draw background glow based on average frequency
+  if (avgFrequency > 0.2) {
+    const gradient = ctx.createRadialGradient(
       centerX, centerY, 0,
-      centerX, centerY, glowRadius
+      centerX, centerY, maxLength * avgFrequency
     )
-    glow.addColorStop(0, `${scheme.colors[0]}33`)
-    glow.addColorStop(1, `${scheme.colors[0]}00`)
+    gradient.addColorStop(0, `${scheme.colors[0]}40`)
+    gradient.addColorStop(1, `${scheme.colors[0]}00`)
     
-    ctx.fillStyle = glow
+    ctx.fillStyle = gradient
     ctx.fillRect(0, 0, width, height)
   }
 
-  // Draw stars with trails
+  // Draw stars with enhanced trails
   stars.forEach(star => {
-    const endX = centerX + Math.cos(star.angle) * star.length
-    const endY = centerY + Math.sin(star.angle) * star.length
-
-    // Draw trail
-    const gradient = ctx.createLinearGradient(
+    // Draw trail with improved gradient
+    const trailGradient = ctx.createLinearGradient(
       centerX, centerY,
-      endX, endY
+      star.x, star.y
     )
-    gradient.addColorStop(0, `${star.color}00`)
-    gradient.addColorStop(0.5, `${star.color}${Math.floor(star.opacity * 255).toString(16).padStart(2, '0')}`)
-    gradient.addColorStop(1, `${star.color}00`)
-
+    const startAlpha = Math.floor(star.opacity * 60).toString(16).padStart(2, '0')
+    const endAlpha = Math.floor(star.opacity * 200).toString(16).padStart(2, '0')
+    
+    trailGradient.addColorStop(0, `${star.color}${startAlpha}`)
+    trailGradient.addColorStop(0.4, `${star.color}${endAlpha}`)
+    trailGradient.addColorStop(1, `${star.color}${startAlpha}`)
+    
     ctx.beginPath()
     ctx.moveTo(centerX, centerY)
-    ctx.lineTo(endX, endY)
-    ctx.strokeStyle = gradient
-    ctx.lineWidth = 2 + avgFrequency * 3
+    ctx.lineTo(star.x, star.y)
+    ctx.strokeStyle = trailGradient
+    ctx.lineWidth = 1.5 + (star.opacity * 2)
+    ctx.stroke()
 
-    // Add glow effect based on frequency
-    if (avgFrequency > 0.6) {
+    // Draw star point with enhanced glow
+    if (avgFrequency > 0.2) {
       ctx.shadowColor = star.color
-      ctx.shadowBlur = 10 * avgFrequency
-      ctx.stroke()
-      ctx.shadowBlur = 0
-    } else {
-      ctx.stroke()
+      ctx.shadowBlur = 10 * avgFrequency * star.opacity
     }
+    
+    ctx.beginPath()
+    ctx.arc(star.x, star.y, 1.5 + (star.opacity * 2), 0, Math.PI * 2)
+    ctx.fillStyle = star.color
+    ctx.fill()
+    
+    ctx.shadowBlur = 0
   })
 
-  // Draw center burst
-  const burstRadius = 20 + avgFrequency * 30
+  // Draw center burst with enhanced effects
+  const burstSize = 10 + (avgFrequency * 20 * smoothedSensitivity)
   const burstGradient = ctx.createRadialGradient(
     centerX, centerY, 0,
-    centerX, centerY, burstRadius
+    centerX, centerY, burstSize
   )
-  burstGradient.addColorStop(0, scheme.colors[0])
-  burstGradient.addColorStop(0.5, `${scheme.colors[0]}66`)
-  burstGradient.addColorStop(1, `${scheme.colors[0]}00`)
+  
+  // Create multi-color burst effect
+  scheme.colors.forEach((color, index) => {
+    const alpha = Math.floor((0.8 - (index * 0.15)) * 255).toString(16).padStart(2, '0')
+    burstGradient.addColorStop(index / (scheme.colors.length - 1), `${color}${alpha}`)
+  })
 
-  ctx.fillStyle = burstGradient
+  if (avgFrequency > 0.2) {
+    ctx.shadowColor = scheme.colors[0]
+    ctx.shadowBlur = 20 * avgFrequency * smoothedSensitivity
+  }
+
   ctx.beginPath()
-  ctx.arc(centerX, centerY, burstRadius, 0, Math.PI * 2)
+  ctx.arc(centerX, centerY, burstSize, 0, Math.PI * 2)
+  ctx.fillStyle = burstGradient
   ctx.fill()
+
+  ctx.shadowBlur = 0
 } 

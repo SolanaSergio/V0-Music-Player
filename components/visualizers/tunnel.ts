@@ -22,6 +22,10 @@ export const drawTunnel = (
   const baseRadius = Math.min(width, height) * 0.4
   const avgFrequency = getAverageFrequency(data, sensitivity)
 
+  // Clear canvas with solid background
+  ctx.fillStyle = scheme.background || '#000000'
+  ctx.fillRect(0, 0, width, height)
+
   // Update global rotation based on average frequency
   globalRotation += 0.02 + avgFrequency * 0.03
 
@@ -31,7 +35,7 @@ export const drawTunnel = (
   }
 
   // Add new segments based on frequency
-  if (segments.length < maxSegments && avgFrequency > 0.3) {
+  if (segments.length < maxSegments && avgFrequency > 0.2) {
     const freqIndex = Math.floor(Math.random() * data.length)
     const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
     
@@ -44,7 +48,7 @@ export const drawTunnel = (
   }
 
   // Draw background glow
-  if (avgFrequency > 0.5) {
+  if (avgFrequency > 0.4) {
     const glowRadius = baseRadius * 1.5 * avgFrequency
     const glow = ctx.createRadialGradient(
       centerX, centerY, 0,

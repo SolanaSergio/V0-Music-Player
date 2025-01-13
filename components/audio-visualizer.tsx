@@ -1,28 +1,14 @@
 'use client'
 
-import { useRef, useEffect, useState, useMemo } from 'react'
-import type { AudioVisualizerProps, VisualizerMode } from '@/types/audio'
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
+import type { AudioVisualizerProps } from '@/types/audio'
 import { useCanvas } from '@/hooks/use-canvas'
-import { useAnimationFrame } from '@/hooks/use-animation-frame'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
-import {
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent
-} from "@/components/ui/tooltip"
-import { visualizerModes, colorSchemes } from '@/config/visualizer'
+import { colorSchemes } from '@/config/visualizer'
 import {
   drawBars,
   drawWave,
   drawCircle,
+  drawRipples,
   drawSpectrum,
   drawParticles,
   drawFrequency,
@@ -33,310 +19,231 @@ import {
   drawMatrix,
   drawRings,
   drawTunnel,
-  drawRipples,
-  handleMouseInteraction,
   createMouseHandlers,
-  type MouseHandlers
+  handleMouseInteraction
 } from '@/components/visualizers'
-import type { DrawContext } from '@/components/visualizers/types'
-import type { RippleEffect } from '@/components/visualizers/types'
-import type { AnimationConfig } from '@/types/audio'
+import type { DrawContext, RippleEffect } from '@/components/visualizers/types'
 
 export function AudioVisualizer({ 
   analyser,
   className,
   visualizerMode = 'bars',
   colorScheme = 'default',
-  sensitivity = 1.5,
-  showControls = true,
-  interactive = true
+  sensitivity = 1.5
 }: AudioVisualizerProps) {
-  const mouseRef = useRef({ x: 0, y: 0, pressed: false })
-  const handlersRef = useRef<MouseHandlers | null>(null)
+  const { setupCanvas, dimensions, canvasRef } = useCanvas()
+  const animationFrame = useRef<number>()
+  const mouseState = useRef({ x: 0, y: 0, pressed: false })
   
-  const { canvasRef, setupCanvas, dimensions } = useCanvas()
-  
-  // Memoize mouse handlers creation to prevent unnecessary re-creation
-  const getMouseHandlers = useMemo(() => {
-    return (canvas: HTMLCanvasElement) => createMouseHandlers(canvas, mouseRef.current)
-  }, []) // Empty deps since we use refs
-
-  // Memoized state updates
-  const [mode, setMode] = useState<VisualizerMode['id']>(visualizerMode)
+  const [mode, setMode] = useState(visualizerMode)
   const [colors, setColors] = useState(colorScheme)
   const [sens, setSens] = useState(sensitivity)
   const [ripples, setRipples] = useState<RippleEffect[]>([])
 
   // Update state when props change
   useEffect(() => {
-    if (visualizerMode !== mode) {
-      setMode(visualizerMode)
-    }
-  }, [visualizerMode, mode])
+    setMode(visualizerMode)
+  }, [visualizerMode])
 
   useEffect(() => {
-    if (colorScheme !== colors) {
-      setColors(colorScheme)
-    }
-  }, [colorScheme, colors])
+    setColors(colorScheme)
+  }, [colorScheme])
 
   useEffect(() => {
-    if (sensitivity !== sens) {
-      setSens(sensitivity)
-    }
-  }, [sensitivity, sens])
+    setSens(sensitivity)
+  }, [sensitivity])
 
-  // Event listener setup
+  // Setup mouse handlers for ripple effect
   useEffect(() => {
-    if (!interactive || !canvasRef.current) return
-
     const canvas = canvasRef.current
-    handlersRef.current = getMouseHandlers(canvas)
-    const handlers = handlersRef.current
+    if (!canvas) return
 
-    canvas.addEventListener('mousemove', handlers.handleMouseMove)
-    canvas.addEventListener('mousedown', handlers.handleMouseDown)
-    canvas.addEventListener('mouseup', handlers.handleMouseUp)
-    canvas.addEventListener('mouseleave', handlers.handleMouseUp)
-
-    return () => {
-      canvas.removeEventListener('mousemove', handlers.handleMouseMove)
-      canvas.removeEventListener('mousedown', handlers.handleMouseDown)
-      canvas.removeEventListener('mouseup', handlers.handleMouseUp)
-      canvas.removeEventListener('mouseleave', handlers.handleMouseUp)
-    }
-  }, [interactive, canvasRef, getMouseHandlers])
-
-  // Update ripples for interactive modes
-  useEffect(() => {
+    const handlers = createMouseHandlers(canvas, mouseState.current)
+    
     if (mode === 'ripple') {
-      const scheme = colorSchemes.find(s => s.id === colors) || colorSchemes[0]
-      const newRipple = handleMouseInteraction(mouseRef.current, scheme, sens)
-      if (newRipple) {
-        setRipples(prev => [...prev, newRipple])
+      const handleTouchStart = (e: TouchEvent) => {
+        e.preventDefault()
+        const touch = e.touches[0]
+        const mouseEvent = new MouseEvent('mousedown', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        })
+        handlers.handleMouseDown(mouseEvent)
+      }
+
+      const handleTouchMove = (e: TouchEvent) => {
+        e.preventDefault()
+        const touch = e.touches[0]
+        const mouseEvent = new MouseEvent('mousemove', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        })
+        handlers.handleMouseMove(mouseEvent)
+      }
+
+      const handleTouchEnd = (e: TouchEvent) => {
+        e.preventDefault()
+        const mouseEvent = new MouseEvent('mouseup')
+        handlers.handleMouseUp(mouseEvent)
+      }
+
+      canvas.addEventListener('mousemove', handlers.handleMouseMove)
+      canvas.addEventListener('mousedown', handlers.handleMouseDown)
+      canvas.addEventListener('mouseup', handlers.handleMouseUp)
+      canvas.addEventListener('touchstart', handleTouchStart)
+      canvas.addEventListener('touchmove', handleTouchMove)
+      canvas.addEventListener('touchend', handleTouchEnd)
+
+      return () => {
+        canvas.removeEventListener('mousemove', handlers.handleMouseMove)
+        canvas.removeEventListener('mousedown', handlers.handleMouseDown)
+        canvas.removeEventListener('mouseup', handlers.handleMouseUp)
+        canvas.removeEventListener('touchstart', handleTouchStart)
+        canvas.removeEventListener('touchmove', handleTouchMove)
+        canvas.removeEventListener('touchend', handleTouchEnd)
       }
     }
-  }, [mode, colors, sens])
+  }, [mode, canvasRef])
 
-  // Cleanup ripples when mode changes
+  // Clear ripples when switching away from ripple mode
   useEffect(() => {
     if (mode !== 'ripple') {
       setRipples([])
+      mouseState.current = { x: 0, y: 0, pressed: false }
     }
   }, [mode])
 
-  // Get the default config for the current mode
-  const defaultConfig = useMemo<AnimationConfig>(() => {
-    const currentMode = visualizerModes.find(m => m.id === mode)
-    const defaultValues: AnimationConfig = {
-      speed: 1,
-      smoothing: 0.8,
-      decay: 0.98,
-      blend: 0.1
-    }
+  const defaultConfig = useMemo(() => ({
+    speed: 1,
+    decay: 0.98,
+    smoothing: 0.8,
+    blend: 0.1
+  }), [])
+
+  const draw = useCallback(() => {
+    const ctx = setupCanvas()
+    if (!ctx || !analyser) return
+
+    // Reset canvas state completely
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.globalAlpha = 1
+    ctx.globalCompositeOperation = 'source-over'
     
-    if (!currentMode?.defaultConfig) {
-      return defaultValues
+    // Clear canvas completely
+    ctx.clearRect(0, 0, dimensions.width, dimensions.height)
+    const scheme = colorSchemes.find(s => s.id === colors) || colorSchemes[0]
+    ctx.fillStyle = scheme.background
+    ctx.fillRect(0, 0, dimensions.width, dimensions.height)
+
+    // Get frequency data
+    const dataArray = new Uint8Array(analyser.frequencyBinCount)
+    analyser.getByteFrequencyData(dataArray)
+
+    // Draw current mode
+    const drawContext: DrawContext = {
+      width: dimensions.width,
+      height: dimensions.height,
+      scheme,
+      sensitivity: sens
     }
 
-    return {
-      ...defaultValues,
-      ...currentMode.defaultConfig,
-      speed: currentMode.defaultConfig.speed ?? defaultValues.speed,
-      smoothing: currentMode.defaultConfig.smoothing ?? defaultValues.smoothing,
-      decay: currentMode.defaultConfig.decay ?? defaultValues.decay,
-      blend: currentMode.defaultConfig.blend ?? defaultValues.blend
+    // Draw visualizer based on current mode
+    try {
+      // Reset any lingering canvas states
+      ctx.globalCompositeOperation = 'source-over'
+      ctx.shadowBlur = 0
+      ctx.globalAlpha = 1
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+
+      switch(mode) {
+        case 'bars':
+          drawBars(ctx, dataArray, drawContext)
+          break
+        case 'wave':
+          drawWave(ctx, dataArray, drawContext)
+          break
+        case 'circle':
+          drawCircle(ctx, dataArray, drawContext)
+          break
+        case 'spectrum':
+          drawSpectrum(ctx, dataArray, drawContext)
+          break
+        case 'particles':
+          drawParticles(ctx, dataArray, drawContext)
+          break
+        case 'frequency':
+          drawFrequency(ctx, dataArray, drawContext)
+          break
+        case 'orbit':
+          drawOrbit(ctx, dataArray, drawContext)
+          break
+        case 'terrain':
+          drawTerrain(ctx, dataArray, drawContext)
+          break
+        case 'spiral':
+          drawSpiral(ctx, dataArray, drawContext)
+          break
+        case 'starburst':
+          drawStarburst(ctx, dataArray, drawContext)
+          break
+        case 'ripple':
+          // Handle mouse interaction for ripples
+          const mouseRipple = handleMouseInteraction(mouseState.current, scheme, sens)
+          if (mouseRipple) {
+            ripples.push(mouseRipple)
+          }
+          
+          const updatedRipples = drawRipples(ctx, dataArray, drawContext, ripples, defaultConfig)
+          if (updatedRipples.length !== ripples.length) {
+            requestAnimationFrame(() => {
+              setRipples(updatedRipples)
+            })
+          }
+          break
+        case 'matrix':
+          drawMatrix(ctx, dataArray, drawContext)
+          break
+        case 'rings':
+          drawRings(ctx, dataArray, drawContext)
+          break
+        case 'tunnel':
+          drawTunnel(ctx, dataArray, drawContext)
+          break
+      }
+    } catch (error) {
+      console.error('Error in visualization:', error)
     }
-  }, [mode])
 
-  // Main visualization loop using useAnimationFrame
-  useAnimationFrame(
-    () => {
-      const ctx = setupCanvas()
-      if (!ctx || !analyser) return
+    // Request next frame
+    animationFrame.current = requestAnimationFrame(draw)
+  }, [mode, colors, sens, dimensions, analyser, ripples, defaultConfig, setupCanvas])
 
-      // Clear with alpha for trail effect
-      ctx.fillStyle = `${colorSchemes.find(s => s.id === colors)?.background || '#000000'}0D`
-      ctx.fillRect(0, 0, dimensions.width, dimensions.height)
-
-      // Get frequency data
-      const dataArray = new Uint8Array(analyser.frequencyBinCount)
-      analyser.getByteFrequencyData(dataArray)
-
-      // Draw current mode
-      const scheme = colorSchemes.find(s => s.id === colors) || colorSchemes[0]
-      const drawContext: DrawContext = {
-        width: dimensions.width,
-        height: dimensions.height,
-        scheme,
-        sensitivity: sens
-      }
-
-      // Draw visualizer based on current mode
-      try {
-        switch(mode) {
-          case 'ripple':
-            const updatedRipples = drawRipples(ctx, dataArray, drawContext, ripples, defaultConfig)
-            if (updatedRipples.length !== ripples.length) {
-              requestAnimationFrame(() => {
-                setRipples(updatedRipples)
-              })
-            }
-            break
-          case 'bars':
-            drawBars(ctx, dataArray, drawContext)
-            break
-          case 'wave':
-            drawWave(ctx, dataArray, drawContext)
-            break
-          case 'circle':
-            drawCircle(ctx, dataArray, drawContext)
-            break
-          case 'spectrum':
-            drawSpectrum(ctx, dataArray, drawContext)
-            break
-          case 'particles':
-            drawParticles(ctx, dataArray, drawContext)
-            break
-          case 'frequency':
-            drawFrequency(ctx, dataArray, drawContext)
-            break
-          case 'orbit':
-            drawOrbit(ctx, dataArray, drawContext)
-            break
-          case 'terrain':
-            drawTerrain(ctx, dataArray, drawContext)
-            break
-          case 'spiral':
-            drawSpiral(ctx, dataArray, drawContext)
-            break
-          case 'starburst':
-            drawStarburst(ctx, dataArray, drawContext)
-            break
-          case 'matrix':
-            drawMatrix(ctx, dataArray, drawContext)
-            break
-          case 'rings':
-            drawRings(ctx, dataArray, drawContext)
-            break
-          case 'tunnel':
-            drawTunnel(ctx, dataArray, drawContext)
-            break
-          default:
-            console.warn(`Unknown visualizer mode: ${mode}`)
-            drawBars(ctx, dataArray, drawContext)
-        }
-      } catch (error) {
-        console.error(`Error in visualizer ${mode}:`, error)
-        drawBars(ctx, dataArray, drawContext)
-      }
-    },
-    [analyser, mode, colors, sens, defaultConfig, ripples]
-  )
-
-  // Handle window resize
+  // Clean up animation frame on unmount
   useEffect(() => {
-    const handleResize = () => {
-      setupCanvas()
+    return () => {
+      if (animationFrame.current) {
+        cancelAnimationFrame(animationFrame.current)
+      }
     }
-    
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [setupCanvas])
+  }, [])
 
-  // Memoize the controls to prevent unnecessary re-renders
-  const visualizerControls = useMemo(() => (
-    <div className="absolute bottom-4 left-4 right-4 flex items-center gap-4 bg-background/80 backdrop-blur-sm rounded-lg p-2">
-      <TooltipRoot>
-        <TooltipTrigger asChild>
-          <div>
-            <Select 
-              value={mode} 
-              onValueChange={(value: VisualizerMode['id']) => {
-                setMode(value as typeof mode)
-              }}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select mode" />
-              </SelectTrigger>
-              <SelectContent>
-                {visualizerModes.map((mode) => (
-                  <SelectItem key={mode.id} value={mode.id}>
-                    {mode.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Visualization mode</p>
-        </TooltipContent>
-      </TooltipRoot>
-
-      <TooltipRoot>
-        <TooltipTrigger asChild>
-          <div>
-            <Select 
-              value={colors} 
-              onValueChange={setColors}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select colors" />
-              </SelectTrigger>
-              <SelectContent>
-                {colorSchemes.map((scheme) => (
-                  <SelectItem key={scheme.id} value={scheme.id}>
-                    {scheme.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Color scheme</p>
-        </TooltipContent>
-      </TooltipRoot>
-
-      <TooltipRoot>
-        <TooltipTrigger asChild>
-          <div className="w-[180px]">
-            <Slider
-              value={[sens]}
-              min={0.5}
-              max={2.5}
-              step={0.1}
-              onValueChange={([value]) => setSens(value)}
-            />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Sensitivity</p>
-        </TooltipContent>
-      </TooltipRoot>
-    </div>
-  ), [mode, colors, sens, setMode, setColors, setSens])
-
-  if (!showControls) {
-    return (
-      <canvas
-        ref={canvasRef}
-        className={className}
-      />
-    )
-  }
+  // Main visualization loop
+  useEffect(() => {
+    draw()
+    return () => {
+      if (animationFrame.current) {
+        cancelAnimationFrame(animationFrame.current)
+      }
+    }
+  }, [draw])
 
   return (
-    <TooltipProvider>
-      <div className="relative">
-        <canvas
-          ref={canvasRef}
-          className={className}
-        />
-        {visualizerControls}
-      </div>
-    </TooltipProvider>
+    <div className={`relative w-full h-full ${className}`}>
+      <canvas 
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full"
+      />
+    </div>
   )
 }
 

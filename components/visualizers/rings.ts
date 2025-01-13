@@ -20,12 +20,17 @@ export const drawRings = (
   const centerX = width / 2
   const centerY = height / 2
   const maxRadius = Math.min(width, height) * 0.4
+  const avgFrequency = getAverageFrequency(data, sensitivity)
+
+  // Clear canvas with solid background
+  ctx.fillStyle = scheme.background || '#000000'
+  ctx.fillRect(0, 0, width, height)
 
   // Update existing rings
   for (let i = rings.length - 1; i >= 0; i--) {
     const ring = rings[i]
     ring.rotation += ring.speed
-    ring.opacity -= 0.005
+    ring.opacity -= 0.002 // Reduced opacity decay
 
     // Remove rings that have faded out
     if (ring.opacity <= 0) {
@@ -34,9 +39,7 @@ export const drawRings = (
   }
 
   // Create new rings based on frequency data
-  const avgFrequency = getAverageFrequency(data, sensitivity)
-  const spawnCount = Math.floor(avgFrequency * 2)
-
+  const spawnCount = Math.floor(avgFrequency * 3)
   for (let i = 0; i < spawnCount && rings.length < maxRings; i++) {
     const freqIndex = Math.floor(Math.random() * data.length)
     const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
@@ -45,13 +48,13 @@ export const drawRings = (
       radius: maxRadius * (0.2 + Math.random() * 0.8),
       rotation: Math.random() * Math.PI * 2,
       speed: (0.02 + normalizedValue * 0.04) * (Math.random() > 0.5 ? 1 : -1),
-      opacity: 0.8 + Math.random() * 0.2,
+      opacity: 1.0, // Start with full opacity
       color: scheme.colors[Math.floor(Math.random() * scheme.colors.length)]
     })
   }
 
   // Draw background glow
-  if (avgFrequency > 0.5) {
+  if (avgFrequency > 0.4) {
     const glowRadius = maxRadius * 1.5 * avgFrequency
     const glow = ctx.createRadialGradient(
       centerX, centerY, 0,
@@ -102,26 +105,26 @@ export const drawRings = (
         ctx.quadraticCurveTo(prevX, prevY, cpX, cpY)
       }
     }
-
     ctx.closePath()
 
-    // Create gradient for ring
+    // Create gradient for ring with improved opacity handling
     const gradient = ctx.createLinearGradient(
       centerX - ring.radius,
       centerY - ring.radius,
       centerX + ring.radius,
       centerY + ring.radius
     )
-    gradient.addColorStop(0, `${ring.color}${Math.floor(ring.opacity * 255).toString(16).padStart(2, '0')}`)
+    const alpha = Math.floor(ring.opacity * 255).toString(16).padStart(2, '0')
+    gradient.addColorStop(0, `${ring.color}${alpha}`)
     gradient.addColorStop(1, `${ring.color}33`)
 
     ctx.strokeStyle = gradient
     ctx.lineWidth = 2 + avgFrequency * 3
 
     // Add glow effect based on frequency
-    if (avgFrequency > 0.6) {
+    if (avgFrequency > 0.4) {
       ctx.shadowColor = ring.color
-      ctx.shadowBlur = 15 * avgFrequency
+      ctx.shadowBlur = 15 * avgFrequency * ring.opacity
       ctx.stroke()
       ctx.shadowBlur = 0
     } else {
