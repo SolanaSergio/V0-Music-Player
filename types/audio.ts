@@ -147,16 +147,35 @@ export interface RippleEffect {
   speed: number
 }
 
+export enum StreamErrorType {
+  CONNECTION_TIMEOUT = 'CONNECTION_TIMEOUT',
+  PLAYBACK_NOT_ALLOWED = 'PLAYBACK_NOT_ALLOWED',
+  FORMAT_NOT_SUPPORTED = 'FORMAT_NOT_SUPPORTED',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  CONTEXT_INIT_FAILED = 'CONTEXT_INIT_FAILED',
+  UNKNOWN = 'UNKNOWN'
+}
+
+export interface StreamError {
+  type: StreamErrorType
+  message: string
+}
+
 export interface StreamState {
   isBuffering: boolean
   isConnected: boolean
-  metadata?: {
-    title?: string
-    artist?: string
-    show?: string
-  }
-  error?: string
   retryCount: number
+  error?: StreamError
+}
+
+export interface UseRadioStreamReturn {
+  isConnected: boolean
+  isBuffering: boolean
+  error?: StreamError
+  connectToStream: (url: string) => Promise<void>
+  disconnect: () => void
+  setVolume: (value: number) => void
+  analyser: AnalyserNode | null
 }
 
 export interface AudioProviderProps {

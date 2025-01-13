@@ -24,261 +24,241 @@ export function useAudioContext() {
   return context
 }
 
+interface EnhancedAnalyserNode extends AnalyserNode {
+  setSensitivity: (value: number) => void;
+}
+
 export function AudioProvider({ 
   children 
 }: { 
   children: React.ReactNode
 }) {
-  console.log('AudioProvider: Starting initialization')
-  
   const audioContextRef = useRef<AudioContext | null>(null)
   const masterGainRef = useRef<GainNode | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  const initializationPromiseRef = useRef<Promise<boolean> | null>(null)
+
+  // Type guard for AudioContext state
+  const isContextRunning = (state: AudioContextState): state is 'running' => state === 'running'
+  const isContextSuspended = (state: AudioContextState): state is 'suspended' => state === 'suspended'
 
   // Initialize audio context with optimal settings
   const initContext = useCallback(async () => {
-    try {
-      console.log('AudioProvider: Initializing audio context')
-      
-      // Always set initial state
-      setIsInitialized(false)
-      setError(null)
-      
-      // If context exists but is closed, clean it up
-      if (audioContextRef.current?.state === 'closed') {
-        audioContextRef.current = null
-        masterGainRef.current = null
-      }
+    // Return existing initialization promise if one is in progress
+    if (initializationPromiseRef.current) {
+      return initializationPromiseRef.current
+    }
 
-      // Create new context if needed
-      if (!audioContextRef.current) {
+    // Create new initialization promise
+    initializationPromiseRef.current = (async () => {
+      try {
+        // If context exists and is not closed, try to resume it
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+          if (isContextSuspended(audioContextRef.current.state)) {
+            try {
+              await audioContextRef.current.resume()
+            } catch (err) {
+              console.warn('Could not resume existing context:', err)
+            }
+          }
+          return true
+        }
+
+        // Reset state
+        setIsInitialized(false)
+        setError(null)
+        
         const contextOptions = {
-          sampleRate: 48000,
+          sampleRate: 44100,
           latencyHint: 'interactive' as AudioContextLatencyCategory
         }
 
-        console.log('AudioProvider: Creating new AudioContext with options:', contextOptions)
-
         // Create audio context with fallback for Safari
-        const AudioContextClass = (
-          window.AudioContext || 
-          // @ts-expect-error - Safari support
-          window.webkitAudioContext
-        )
+        const AudioContextClass = window.AudioContext || ((window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
+        if (!AudioContextClass) {
+          throw new Error('Web Audio API is not supported in this browser')
+        }
 
+        // Create and store the context
         const ctx = new AudioContextClass(contextOptions)
         audioContextRef.current = ctx
 
-        // Create master gain node immediately
+        // Create master gain node
         const masterGain = ctx.createGain()
         masterGain.gain.setValueAtTime(1.0, ctx.currentTime)
         masterGain.connect(ctx.destination)
         masterGainRef.current = masterGain
 
-        console.log('AudioProvider: Initial setup complete')
-
-        // Try to resume context immediately
-        if (ctx.state === 'suspended') {
-          console.log('AudioProvider: Attempting immediate resume')
-          try {
-            await ctx.resume()
-            console.log('AudioProvider: Context resumed successfully')
+        // Handle state changes
+        ctx.onstatechange = () => {
+          if (!audioContextRef.current) return
+          
+          const state = audioContextRef.current.state
+          if (isContextRunning(state)) {
             setIsInitialized(true)
             setError(null)
-          } catch (resumeError) {
-            console.warn('AudioProvider: Initial resume failed (expected) -', resumeError)
-            // Don't treat this as an error - it's expected on first load
-            setError(new Error('Click Play to start audio'))
+          } else if (isContextSuspended(state)) {
+            setIsInitialized(false)
+          } else if (state === 'closed') {
+            setError(new Error('Audio system closed - please refresh'))
+            setIsInitialized(false)
+            audioContextRef.current = null
+            masterGainRef.current = null
           }
-        } else if (ctx.state === 'running') {
-          setIsInitialized(true)
-          setError(null)
         }
 
-        // Register state change handler
-        ctx.onstatechange = () => {
-          console.log('AudioProvider: Context state changed to:', ctx.state)
-          switch (ctx.state) {
-            case 'suspended':
-              console.warn('Audio context suspended - waiting for user interaction')
-              setError(new Error('Click Play to start audio'))
-              setIsInitialized(false)
-              break
-            case 'running':
-              console.log('Audio context is running')
-              setError(null)
-              setIsInitialized(true)
-              break
-            case 'closed':
-              console.error('Audio context closed unexpectedly')
-              setError(new Error('Audio system closed - please refresh the page'))
-              setIsInitialized(false)
-              audioContextRef.current = null
-              masterGainRef.current = null
-              break
+        // Initial resume attempt
+        if (isContextSuspended(ctx.state)) {
+          try {
+            await ctx.resume()
+          } catch (err) {
+            console.warn('Initial resume failed (expected):', err)
           }
         }
+
+        setIsInitialized(isContextRunning(ctx.state))
+        return true
+
+      } catch (err) {
+        console.error('Audio context initialization failed:', err)
+        setError(err instanceof Error ? err : new Error('Failed to initialize audio'))
+        setIsInitialized(false)
+        return false
       }
+    })()
 
-      return true
-    } catch (err) {
-      console.error('AudioProvider: Critical initialization error:', err)
-      setError(err instanceof Error ? err : new Error('Failed to initialize audio system'))
-      setIsInitialized(false)
-      return false
-    }
+    const result = await initializationPromiseRef.current
+    initializationPromiseRef.current = null
+    return result
   }, [])
 
-  // Resume audio context (needed for Safari and after user interaction)
+  // Optimized resume context function
   const resumeContext = useCallback(async () => {
     try {
+      // Initialize if needed
       if (!audioContextRef.current) {
-        console.log('AudioProvider: No context exists, initializing...')
         const success = await initContext()
         if (!success) {
           throw new Error('Failed to initialize audio context')
         }
+        // Check again after initialization
+        if (!audioContextRef.current) {
+          throw new Error('Audio context initialization failed')
+        }
       }
 
       const ctx = audioContextRef.current
-      if (!ctx) {
-        throw new Error('Audio context initialization failed')
-      }
-
-      if (ctx.state === 'suspended') {
-        console.log('AudioProvider: Attempting to resume suspended context')
+      // Attempt to resume if suspended
+      if (isContextSuspended(ctx.state)) {
         await ctx.resume()
-        console.log('AudioProvider: Context resumed successfully')
+        
+        // Verify the state after resume
+        if (isContextRunning(ctx.state)) {
+          setIsInitialized(true)
+          setError(null)
+        } else {
+          throw new Error('Failed to resume audio context')
+        }
+      } else if (isContextRunning(ctx.state)) {
         setIsInitialized(true)
         setError(null)
-      } else if (ctx.state === 'running') {
-        console.log('AudioProvider: Context already running')
-        setIsInitialized(true)
-        setError(null)
-      } else if (ctx.state === 'closed') {
-        throw new Error('Audio context is closed')
       }
     } catch (err) {
-      console.error('AudioProvider: Failed to resume audio context:', err)
-      setError(new Error('Failed to start audio - please try again'))
+      console.error('Resume context failed:', err)
+      setError(err instanceof Error ? err : new Error('Failed to start audio - please try again'))
       setIsInitialized(false)
       throw err
     }
   }, [initContext])
 
-  // Initialize on mount with proper error handling
-  useEffect(() => {
-    let mounted = true
-    
-    const initialize = async () => {
-      try {
-        console.log('AudioProvider: Running initialization effect')
-        await initContext()
-      } catch (err) {
-        if (mounted) {
-          console.error('AudioProvider: Mount initialization failed:', err)
-          setError(new Error('Failed to initialize audio system'))
-          setIsInitialized(false)
-        }
-      }
-    }
-
-    void initialize()
-
-    // Handle visibility changes with proper error handling
-    const handleVisibilityChange = () => {
-      const ctx = audioContextRef.current
-      if (!ctx) return
-
-      if (document.hidden && ctx.state === 'running') {
-        console.log('AudioProvider: Page hidden, suspending context')
-        void ctx.suspend()
-      } else if (!document.hidden && ctx.state === 'suspended') {
-        console.log('AudioProvider: Page visible, attempting resume')
-        void resumeContext().catch(err => {
-          console.error('AudioProvider: Failed to resume on visibility change:', err)
-        })
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => {
-      mounted = false
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      const ctx = audioContextRef.current
-      if (ctx && ctx.state !== 'closed') {
-        console.log('AudioProvider: Cleaning up context')
-        void ctx.close()
-      }
-    }
-  }, [initContext, resumeContext])
-
-  // Create analyzer node with optimal settings for streaming audio
+  // Create analyzer with optimized settings
   const createAnalyser = useCallback(() => {
-    console.log('AudioProvider: Creating analyser node')
     const ctx = audioContextRef.current
-    if (!ctx) {
-      console.warn('AudioProvider: Cannot create analyser - audio context not initialized')
-      return null
-    }
+    if (!ctx) return null
 
     try {
-      const analyser = ctx.createAnalyser()
+      const analyser = ctx.createAnalyser() as EnhancedAnalyserNode
+      analyser.fftSize = 2048 // Increased for better frequency resolution
+      analyser.smoothingTimeConstant = 0.85
+      analyser.minDecibels = -90 // Increased range for better sensitivity
+      analyser.maxDecibels = -10
       
-      // Configure for optimal visualization
-      analyser.fftSize = 2048 // Higher for frequency resolution
-      analyser.smoothingTimeConstant = 0.8 // Smooth transitions
-      analyser.minDecibels = -90 // Increase dynamic range
-      analyser.maxDecibels = -10 // Prevent clipping
-
-      console.log('AudioProvider: Analyser node created successfully')
+      // Create a gain node specifically for the analyzer to control sensitivity
+      const analyzerGain = ctx.createGain()
+      analyzerGain.gain.setValueAtTime(1.0, ctx.currentTime)
+      
+      // Connect through the analyzer gain node
+      if (masterGainRef.current) {
+        analyzerGain.connect(analyser)
+        analyzerGain.connect(masterGainRef.current)
+      }
+      
+      // Add sensitivity control method to analyzer
+      analyser.setSensitivity = (value: number) => {
+        const normalizedValue = Math.max(0.1, Math.min(2.0, value))
+        const scaledValue = Math.pow(normalizedValue, 2) // Exponential scaling for more natural control
+        analyzerGain.gain.setTargetAtTime(scaledValue, ctx.currentTime, 0.1)
+      }
+      
       return analyser
     } catch (err) {
-      console.error('AudioProvider: Failed to create analyser node:', err)
+      console.error('Failed to create analyser:', err)
       return null
     }
   }, [])
 
-  // Set master volume with proper ramping
+  // Optimized volume control
   const setVolume = useCallback((value: number) => {
     const masterGain = masterGainRef.current
     const ctx = audioContextRef.current
     if (masterGain && ctx) {
       const safeValue = Math.max(0, Math.min(1, value))
-      // Ramp volume change over 50ms to avoid clicks
-      masterGain.gain.linearRampToValueAtTime(
-        safeValue,
-        ctx.currentTime + 0.05
-      )
-      console.log('AudioProvider: Volume set to:', safeValue)
+      masterGain.gain.setTargetAtTime(safeValue, ctx.currentTime, 0.01)
     }
   }, [])
 
-  // Clean up audio context
+  // Efficient cleanup
   const cleanup = useCallback(() => {
-    console.log('AudioProvider: Cleaning up')
     const ctx = audioContextRef.current
     if (ctx && ctx.state !== 'closed') {
-      // Ramp down volume before closing
       if (masterGainRef.current) {
-        masterGainRef.current.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05)
+        masterGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, 0.01)
       }
       setTimeout(() => {
-        void ctx.close().catch(err => {
-          console.error('AudioProvider: Error closing audio context:', err)
-        })
+        ctx.close().catch(console.error)
         audioContextRef.current = null
         masterGainRef.current = null
         setIsInitialized(false)
         setError(null)
-      }, 60)
+      }, 20)
     }
   }, [])
 
-  // Retry initialization
+  // Initialize once on mount
+  useEffect(() => {
+    void initContext()
+    
+    // Efficient visibility change handling
+    const handleVisibilityChange = () => {
+      const ctx = audioContextRef.current
+      if (!ctx) return
+
+      if (document.hidden && ctx.state === 'running') {
+        void ctx.suspend()
+      } else if (!document.hidden && ctx.state === 'suspended') {
+        void resumeContext().catch(console.error)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      cleanup()
+    }
+  }, [initContext, resumeContext, cleanup])
+
   const retry = useCallback(async () => {
-    console.log('AudioProvider: Retrying initialization')
     cleanup()
     await initContext()
   }, [cleanup, initContext])

@@ -1,7 +1,9 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
-import type { AudioVisualizerProps, RippleEffect, VisualizerMode } from '@/types/audio'
+import { useRef, useEffect, useState, useMemo } from 'react'
+import type { AudioVisualizerProps, VisualizerMode } from '@/types/audio'
+import { useCanvas } from '@/hooks/use-canvas'
+import { useAnimationFrame } from '@/hooks/use-animation-frame'
 import {
   Select,
   SelectContent,
@@ -17,12 +19,10 @@ import {
   TooltipContent
 } from "@/components/ui/tooltip"
 import { visualizerModes, colorSchemes } from '@/config/visualizer'
-import { 
-  drawBars, 
-  drawWave, 
-  drawCircle, 
-  updateRipples, 
-  createRipple,
+import {
+  drawBars,
+  drawWave,
+  drawCircle,
   drawSpectrum,
   drawParticles,
   drawFrequency,
@@ -33,15 +33,14 @@ import {
   drawMatrix,
   drawRings,
   drawTunnel,
+  drawRipples,
+  handleMouseInteraction,
+  createMouseHandlers,
+  type MouseHandlers
 } from '@/components/visualizers'
-
-// Animation configuration - kept static for now but could be made configurable via UI
-const DEFAULT_CONFIG = {
-  speed: 1,
-  smoothing: 0.8,
-  decay: 0.98,
-  blend: 0.1
-}
+import type { DrawContext } from '@/components/visualizers/types'
+import type { RippleEffect } from '@/components/visualizers/types'
+import type { AnimationConfig } from '@/types/audio'
 
 export function AudioVisualizer({ 
   analyser,
@@ -49,252 +48,275 @@ export function AudioVisualizer({
   visualizerMode = 'bars',
   colorScheme = 'default',
   sensitivity = 1.5,
-  quality = 'medium',
   showControls = true,
   interactive = true
 }: AudioVisualizerProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationRef = useRef<number>()
-  const rippleRef = useRef<RippleEffect[]>([])
   const mouseRef = useRef({ x: 0, y: 0, pressed: false })
+  const handlersRef = useRef<MouseHandlers | null>(null)
   
-  // Reusable arrays for audio data
-  const dataArrayRef = useRef<Uint8Array>()
-  const timeDataArrayRef = useRef<Uint8Array>()
+  const { canvasRef, setupCanvas, dimensions } = useCanvas()
   
-  // Update state when props change
-  useEffect(() => {
-    setMode(visualizerMode)
-  }, [visualizerMode])
+  // Memoize mouse handlers creation to prevent unnecessary re-creation
+  const getMouseHandlers = useMemo(() => {
+    return (canvas: HTMLCanvasElement) => createMouseHandlers(canvas, mouseRef.current)
+  }, []) // Empty deps since we use refs
 
-  useEffect(() => {
-    setColors(colorScheme)
-  }, [colorScheme])
-
-  useEffect(() => {
-    setSens(sensitivity)
-  }, [sensitivity])
-
-  const [mode, setMode] = useState(visualizerMode)
+  // Memoized state updates
+  const [mode, setMode] = useState<VisualizerMode['id']>(visualizerMode)
   const [colors, setColors] = useState(colorScheme)
   const [sens, setSens] = useState(sensitivity)
+  const [ripples, setRipples] = useState<RippleEffect[]>([])
 
-  // Event handlers with proper cleanup
+  // Update state when props change
+  useEffect(() => {
+    if (visualizerMode !== mode) {
+      setMode(visualizerMode)
+    }
+  }, [visualizerMode, mode])
+
+  useEffect(() => {
+    if (colorScheme !== colors) {
+      setColors(colorScheme)
+    }
+  }, [colorScheme, colors])
+
+  useEffect(() => {
+    if (sensitivity !== sens) {
+      setSens(sensitivity)
+    }
+  }, [sensitivity, sens])
+
+  // Event listener setup
   useEffect(() => {
     if (!interactive || !canvasRef.current) return
 
     const canvas = canvasRef.current
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect()
-      mouseRef.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-        pressed: mouseRef.current.pressed
-      }
-    }
+    handlersRef.current = getMouseHandlers(canvas)
+    const handlers = handlersRef.current
 
-    const handleMouseDown = () => {
-      mouseRef.current.pressed = true
-    }
-
-    const handleMouseUp = () => {
-      mouseRef.current.pressed = false
-    }
-
-    canvas.addEventListener('mousemove', handleMouseMove)
-    canvas.addEventListener('mousedown', handleMouseDown)
-    canvas.addEventListener('mouseup', handleMouseUp)
-    canvas.addEventListener('mouseleave', handleMouseUp)
+    canvas.addEventListener('mousemove', handlers.handleMouseMove)
+    canvas.addEventListener('mousedown', handlers.handleMouseDown)
+    canvas.addEventListener('mouseup', handlers.handleMouseUp)
+    canvas.addEventListener('mouseleave', handlers.handleMouseUp)
 
     return () => {
-      canvas.removeEventListener('mousemove', handleMouseMove)
-      canvas.removeEventListener('mousedown', handleMouseDown)
-      canvas.removeEventListener('mouseup', handleMouseUp)
-      canvas.removeEventListener('mouseleave', handleMouseUp)
+      canvas.removeEventListener('mousemove', handlers.handleMouseMove)
+      canvas.removeEventListener('mousedown', handlers.handleMouseDown)
+      canvas.removeEventListener('mouseup', handlers.handleMouseUp)
+      canvas.removeEventListener('mouseleave', handlers.handleMouseUp)
     }
-  }, [interactive])
+  }, [interactive, canvasRef, getMouseHandlers])
 
+  // Update ripples for interactive modes
   useEffect(() => {
-    if (!canvasRef.current) return
-    
-    // Early return if no analyzer with clear error message
-    if (!analyser) {
-      console.warn('No analyzer node available for visualization')
-      return
-    }
-
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      console.error('Could not get 2D context from canvas')
-      return
-    }
-
-    // Set up high DPI canvas
-    const setupCanvas = () => {
-      const dpr = window.devicePixelRatio || 1
-      const rect = canvas.getBoundingClientRect()
-      
-      // Only update if dimensions actually changed
-      if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
-        canvas.width = rect.width * dpr
-        canvas.height = rect.height * dpr
-        ctx.scale(dpr, dpr)
+    if (mode === 'ripple') {
+      const scheme = colorSchemes.find(s => s.id === colors) || colorSchemes[0]
+      const newRipple = handleMouseInteraction(mouseRef.current, scheme, sens)
+      if (newRipple) {
+        setRipples(prev => [...prev, newRipple])
       }
-      
-      return { width: rect.width, height: rect.height }
     }
+  }, [mode, colors, sens])
 
-    const dimensions = setupCanvas()
-
-    // Configure analyser based on quality setting
-    const fftSizes = { low: 128, medium: 256, high: 512 }
-    analyser.fftSize = fftSizes[quality] * 2
-    analyser.smoothingTimeConstant = DEFAULT_CONFIG.smoothing
-    analyser.minDecibels = -90
-    analyser.maxDecibels = -10
-
-    // Initialize or resize reusable arrays
-    if (!dataArrayRef.current || dataArrayRef.current.length !== analyser.frequencyBinCount) {
-      dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount)
+  // Cleanup ripples when mode changes
+  useEffect(() => {
+    if (mode !== 'ripple') {
+      setRipples([])
     }
-    if (!timeDataArrayRef.current || timeDataArrayRef.current.length !== analyser.frequencyBinCount) {
-      timeDataArrayRef.current = new Uint8Array(analyser.frequencyBinCount)
-    }
+  }, [mode])
 
-    const scheme = colorSchemes.find(s => s.id === colors) || colorSchemes[0]
+  // Get the default config for the current mode
+  const defaultConfig = useMemo<AnimationConfig>(() => {
+    const currentMode = visualizerModes.find(m => m.id === mode)
+    const defaultValues: AnimationConfig = {
+      speed: 1,
+      smoothing: 0.8,
+      decay: 0.98,
+      blend: 0.1
+    }
     
-    // Drawing functions
-    const drawVisualizer = () => {
-      if (!ctx || !analyser || !dataArrayRef.current || !timeDataArrayRef.current) {
-        console.warn('Missing required resources for visualization')
-        return
+    if (!currentMode?.defaultConfig) {
+      return defaultValues
+    }
+
+    return {
+      ...defaultValues,
+      ...currentMode.defaultConfig,
+      speed: currentMode.defaultConfig.speed ?? defaultValues.speed,
+      smoothing: currentMode.defaultConfig.smoothing ?? defaultValues.smoothing,
+      decay: currentMode.defaultConfig.decay ?? defaultValues.decay,
+      blend: currentMode.defaultConfig.blend ?? defaultValues.blend
+    }
+  }, [mode])
+
+  // Main visualization loop using useAnimationFrame
+  useAnimationFrame(
+    () => {
+      const ctx = setupCanvas()
+      if (!ctx || !analyser) return
+
+      // Clear with alpha for trail effect
+      ctx.fillStyle = `${colorSchemes.find(s => s.id === colors)?.background || '#000000'}0D`
+      ctx.fillRect(0, 0, dimensions.width, dimensions.height)
+
+      // Get frequency data
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      analyser.getByteFrequencyData(dataArray)
+
+      // Draw current mode
+      const scheme = colorSchemes.find(s => s.id === colors) || colorSchemes[0]
+      const drawContext: DrawContext = {
+        width: dimensions.width,
+        height: dimensions.height,
+        scheme,
+        sensitivity: sens
       }
 
+      // Draw visualizer based on current mode
       try {
-        // Clear with alpha for trails
-        ctx.fillStyle = `${scheme.background}${Math.floor(DEFAULT_CONFIG.blend * 255).toString(16).padStart(2, '0')}`
-        ctx.fillRect(0, 0, dimensions.width, dimensions.height)
-
-        // Get audio data
-        analyser.getByteFrequencyData(dataArrayRef.current)
-        analyser.getByteTimeDomainData(timeDataArrayRef.current)
-
-        const drawContext = {
-          ctx,
-          width: dimensions.width,
-          height: dimensions.height,
-          scheme,
-          sensitivity: sens
-        }
-
-        // Draw based on mode
-        switch (mode) {
+        switch(mode) {
+          case 'ripple':
+            const updatedRipples = drawRipples(ctx, dataArray, drawContext, ripples, defaultConfig)
+            if (updatedRipples.length !== ripples.length) {
+              requestAnimationFrame(() => {
+                setRipples(updatedRipples)
+              })
+            }
+            break
           case 'bars':
-            drawBars(ctx, dataArrayRef.current, drawContext)
+            drawBars(ctx, dataArray, drawContext)
             break
           case 'wave':
-            drawWave(ctx, timeDataArrayRef.current, drawContext)
+            drawWave(ctx, dataArray, drawContext)
             break
           case 'circle':
-            drawCircle(ctx, dataArrayRef.current, drawContext)
+            drawCircle(ctx, dataArray, drawContext)
             break
           case 'spectrum':
-            drawSpectrum(ctx, dataArrayRef.current, drawContext)
+            drawSpectrum(ctx, dataArray, drawContext)
             break
           case 'particles':
-            drawParticles(ctx, dataArrayRef.current, drawContext)
+            drawParticles(ctx, dataArray, drawContext)
             break
           case 'frequency':
-            drawFrequency(ctx, dataArrayRef.current, drawContext)
+            drawFrequency(ctx, dataArray, drawContext)
             break
           case 'orbit':
-            drawOrbit(ctx, dataArrayRef.current, drawContext)
+            drawOrbit(ctx, dataArray, drawContext)
             break
           case 'terrain':
-            drawTerrain(ctx, dataArrayRef.current, drawContext)
+            drawTerrain(ctx, dataArray, drawContext)
             break
           case 'spiral':
-            drawSpiral(ctx, dataArrayRef.current, drawContext)
+            drawSpiral(ctx, dataArray, drawContext)
             break
           case 'starburst':
-            drawStarburst(ctx, dataArrayRef.current, drawContext)
+            drawStarburst(ctx, dataArray, drawContext)
             break
           case 'matrix':
-            drawMatrix(ctx, dataArrayRef.current, drawContext)
+            drawMatrix(ctx, dataArray, drawContext)
             break
           case 'rings':
-            drawRings(ctx, dataArrayRef.current, drawContext)
+            drawRings(ctx, dataArray, drawContext)
             break
           case 'tunnel':
-            drawTunnel(ctx, dataArrayRef.current, drawContext)
-            break
-          case 'ripple':
-            // Update and draw ripples
-            rippleRef.current = updateRipples(ctx, rippleRef.current, DEFAULT_CONFIG)
-            if (mouseRef.current.pressed && interactive) {
-              const avgFrequency = dataArrayRef.current.reduce((a, b) => a + b) / dataArrayRef.current.length
-              rippleRef.current.push(
-                createRipple(
-                  mouseRef.current.x,
-                  mouseRef.current.y,
-                  avgFrequency,
-                  scheme,
-                  DEFAULT_CONFIG.speed
-                )
-              )
-            }
+            drawTunnel(ctx, dataArray, drawContext)
             break
           default:
             console.warn(`Unknown visualizer mode: ${mode}`)
-            drawBars(ctx, dataArrayRef.current, drawContext) // Fallback to bars
+            drawBars(ctx, dataArray, drawContext)
         }
-
-        // Only add interactive ripples if not in ripple mode
-        if (mode !== 'ripple' && interactive) {
-          const avgFrequency = dataArrayRef.current.reduce((a, b) => a + b) / dataArrayRef.current.length
-          rippleRef.current = updateRipples(ctx, rippleRef.current, DEFAULT_CONFIG)
-          
-          if (mouseRef.current.pressed) {
-            rippleRef.current.push(
-              createRipple(
-                mouseRef.current.x,
-                mouseRef.current.y,
-                avgFrequency,
-                scheme,
-                DEFAULT_CONFIG.speed
-              )
-            )
-          }
-        }
-
-        animationRef.current = requestAnimationFrame(drawVisualizer)
       } catch (error) {
-        console.error('Error in visualization loop:', error)
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current)
-        }
+        console.error(`Error in visualizer ${mode}:`, error)
+        drawBars(ctx, dataArray, drawContext)
       }
-    }
+    },
+    [analyser, mode, colors, sens, defaultConfig, ripples]
+  )
 
-    // Start animation
-    drawVisualizer()
-
-    // Handle window resize
+  // Handle window resize
+  useEffect(() => {
     const handleResize = () => {
       setupCanvas()
     }
     
     window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [setupCanvas])
 
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
-      window.removeEventListener('resize', handleResize)
-    }
-  }, [analyser, mode, colors, quality, interactive, sens])
+  // Memoize the controls to prevent unnecessary re-renders
+  const visualizerControls = useMemo(() => (
+    <div className="absolute bottom-4 left-4 right-4 flex items-center gap-4 bg-background/80 backdrop-blur-sm rounded-lg p-2">
+      <TooltipRoot>
+        <TooltipTrigger asChild>
+          <div>
+            <Select 
+              value={mode} 
+              onValueChange={(value: VisualizerMode['id']) => {
+                setMode(value as typeof mode)
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {visualizerModes.map((mode) => (
+                  <SelectItem key={mode.id} value={mode.id}>
+                    {mode.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Visualization mode</p>
+        </TooltipContent>
+      </TooltipRoot>
+
+      <TooltipRoot>
+        <TooltipTrigger asChild>
+          <div>
+            <Select 
+              value={colors} 
+              onValueChange={setColors}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select colors" />
+              </SelectTrigger>
+              <SelectContent>
+                {colorSchemes.map((scheme) => (
+                  <SelectItem key={scheme.id} value={scheme.id}>
+                    {scheme.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Color scheme</p>
+        </TooltipContent>
+      </TooltipRoot>
+
+      <TooltipRoot>
+        <TooltipTrigger asChild>
+          <div className="w-[180px]">
+            <Slider
+              value={[sens]}
+              min={0.5}
+              max={2.5}
+              step={0.1}
+              onValueChange={([value]) => setSens(value)}
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Sensitivity</p>
+        </TooltipContent>
+      </TooltipRoot>
+    </div>
+  ), [mode, colors, sens, setMode, setColors, setSens])
 
   if (!showControls) {
     return (
@@ -312,76 +334,7 @@ export function AudioVisualizer({
           ref={canvasRef}
           className={className}
         />
-        <div className="absolute bottom-4 left-4 right-4 flex items-center gap-4 bg-background/80 backdrop-blur-sm rounded-lg p-2">
-          <TooltipRoot>
-            <TooltipTrigger asChild>
-              <div>
-                <Select 
-                  value={mode} 
-                  onValueChange={(value: VisualizerMode['id']) => setMode(value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select mode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {visualizerModes.map((mode) => (
-                      <SelectItem key={mode.id} value={mode.id}>
-                        {mode.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Visualization mode</p>
-            </TooltipContent>
-          </TooltipRoot>
-
-          <TooltipRoot>
-            <TooltipTrigger asChild>
-              <div>
-                <Select 
-                  value={colors} 
-                  onValueChange={(value: string) => setColors(value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select colors" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colorSchemes.map((scheme) => (
-                      <SelectItem key={scheme.id} value={scheme.id}>
-                        {scheme.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Color scheme</p>
-            </TooltipContent>
-          </TooltipRoot>
-
-          <TooltipRoot>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Sensitivity</span>
-                <Slider
-                  value={[sens]}
-                  min={0.1}
-                  max={3}
-                  step={0.1}
-                  onValueChange={([value]) => setSens(value)}
-                  className="w-32"
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Adjust visualization sensitivity</p>
-            </TooltipContent>
-          </TooltipRoot>
-        </div>
+        {visualizerControls}
       </div>
     </TooltipProvider>
   )

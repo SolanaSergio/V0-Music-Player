@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Share2, ListMusic, Mic2, Maximize2, ChevronDown, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, VolumeX, Minimize2 } from 'lucide-react'
+import { Heart, Share2, ListMusic, Mic2, Maximize2, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, VolumeX, Minimize2, ChevronDown } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import {
@@ -115,7 +115,7 @@ export function PlayerView() {
       </div>
 
       {/* Main Content */}
-      <div className="container max-w-7xl mx-auto min-h-[calc(100vh-4rem)] flex flex-col py-6">
+      <div className="container max-w-7xl mx-auto h-[calc(100vh-4rem)] flex flex-col py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -135,7 +135,7 @@ export function PlayerView() {
         </div>
 
         {/* Player Section */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-8 max-w-5xl mx-auto w-full">
+        <div className="flex-1 flex flex-col items-center justify-between gap-8 max-w-5xl mx-auto w-full">
           {/* Visualizer */}
           <motion.div
             layout
@@ -231,17 +231,6 @@ export function PlayerView() {
                 )}
               </Button>
             </div>
-          </motion.div>
-
-          {/* Track Info */}
-          <motion.div
-            className="text-center space-y-2"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <h2 className="text-3xl font-bold tracking-tight">{currentTrack.title}</h2>
-            <p className="text-xl text-muted-foreground">{currentTrack.artist}</p>
           </motion.div>
 
           {/* Progress Bar */}
@@ -486,7 +475,7 @@ export function PlayerView() {
       {/* Error and Loading States */}
       {error && (
         <div className="fixed bottom-4 left-0 right-0 text-sm text-destructive text-center">
-          {error}
+          {error.message}
         </div>
       )}
       {isBuffering && (

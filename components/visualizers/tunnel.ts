@@ -1,15 +1,16 @@
-import type { DrawContext } from './types'
+import type { DrawContext } from '@/components/visualizers/types'
+import { applySensitivity, getAverageFrequency } from './utils'
 
 interface TunnelSegment {
-  z: number
+  radius: number
   rotation: number
-  scale: number
+  depth: number
   color: string
 }
 
 const segments: TunnelSegment[] = []
-const SEGMENT_COUNT = 20
-const MAX_Z = 10
+const maxSegments = 30
+let globalRotation = 0
 
 export const drawTunnel = (
   ctx: CanvasRenderingContext2D,
@@ -18,99 +19,133 @@ export const drawTunnel = (
 ) => {
   const centerX = width / 2
   const centerY = height / 2
-  const baseSize = Math.min(width, height) * 0.4
+  const baseRadius = Math.min(width, height) * 0.4
+  const avgFrequency = getAverageFrequency(data, sensitivity)
 
-  // Initialize segments if needed
-  if (segments.length === 0) {
-    for (let i = 0; i < SEGMENT_COUNT; i++) {
-      segments.push({
-        z: (i / SEGMENT_COUNT) * MAX_Z,
-        rotation: Math.random() * Math.PI * 2,
-        scale: 1,
-        color: scheme.colors[i % scheme.colors.length]
-      })
-    }
+  // Update global rotation based on average frequency
+  globalRotation += 0.02 + avgFrequency * 0.03
+
+  // Remove segments that are too small
+  while (segments.length > 0 && segments[0].radius < 10) {
+    segments.shift()
   }
 
-  // Calculate average frequency for tunnel effects
-  const avgFrequency = data.reduce((sum, value) => sum + value, 0) / data.length
-  const normalizedFrequency = (avgFrequency / 255) * sensitivity
+  // Add new segments based on frequency
+  if (segments.length < maxSegments && avgFrequency > 0.3) {
+    const freqIndex = Math.floor(Math.random() * data.length)
+    const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
+    
+    segments.push({
+      radius: baseRadius,
+      rotation: globalRotation + (Math.random() - 0.5) * Math.PI * normalizedValue,
+      depth: 1,
+      color: scheme.colors[Math.floor(Math.random() * scheme.colors.length)]
+    })
+  }
 
-  // Update and draw segments from back to front
+  // Draw background glow
+  if (avgFrequency > 0.5) {
+    const glowRadius = baseRadius * 1.5 * avgFrequency
+    const glow = ctx.createRadialGradient(
+      centerX, centerY, 0,
+      centerX, centerY, glowRadius
+    )
+    glow.addColorStop(0, `${scheme.colors[0]}33`)
+    glow.addColorStop(1, `${scheme.colors[0]}00`)
+    
+    ctx.fillStyle = glow
+    ctx.fillRect(0, 0, width, height)
+  }
+
+  // Update and draw segments
   segments.forEach((segment, i) => {
     // Update segment
-    segment.z -= 0.1 * (1 + normalizedFrequency)
-    if (segment.z < 0) {
-      segment.z += MAX_Z
-      segment.rotation = Math.random() * Math.PI * 2
-    }
-    
-    segment.rotation += 0.02 * normalizedFrequency
-    segment.color = scheme.colors[i % scheme.colors.length]
+    segment.depth *= 0.95
+    segment.radius *= 0.97
+    segment.rotation += 0.1 * (1 - segment.depth)
 
-    // Calculate perspective
-    const perspective = 1 / (segment.z * 0.2 + 1)
-    const size = baseSize * perspective
-    const sides = 6 // Hexagonal tunnel
-    
+    // Calculate segment properties
+    const sides = 8
+    const angleStep = (Math.PI * 2) / sides
+    const points: [number, number][] = []
+
+    // Create segment points
+    for (let j = 0; j <= sides; j++) {
+      const angle = j * angleStep + segment.rotation
+      const freqIndex = Math.floor((j / sides) * data.length)
+      const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
+      
+      const radiusOffset = normalizedValue * segment.radius * 0.2
+      const currentRadius = segment.radius + radiusOffset
+
+      const x = centerX + Math.cos(angle) * currentRadius
+      const y = centerY + Math.sin(angle) * currentRadius
+      points.push([x, y])
+    }
+
     // Draw segment
     ctx.beginPath()
-    for (let side = 0; side <= sides; side++) {
-      const angle = segment.rotation + (side * Math.PI * 2) / sides
-      const sideX = centerX + Math.cos(angle) * size
-      const sideY = centerY + Math.sin(angle) * size
-      
-      if (side === 0) {
-        ctx.moveTo(sideX, sideY)
+    points.forEach(([x, y], j) => {
+      if (j === 0) {
+        ctx.moveTo(x, y)
       } else {
-        ctx.lineTo(sideX, sideY)
+        // Create smooth curve between points
+        const [prevX, prevY] = points[j - 1]
+        const cpX = (x + prevX) / 2
+        const cpY = (y + prevY) / 2
+        ctx.quadraticCurveTo(prevX, prevY, cpX, cpY)
       }
-    }
+    })
     ctx.closePath()
 
-    // Create gradient fill
-    const gradient = ctx.createRadialGradient(
-      centerX, centerY, size * 0.5,
-      centerX, centerY, size
+    // Create gradient for segment
+    const gradient = ctx.createLinearGradient(
+      centerX - segment.radius,
+      centerY - segment.radius,
+      centerX + segment.radius,
+      centerY + segment.radius
     )
-    gradient.addColorStop(0, `${segment.color}${Math.floor(perspective * 255).toString(16).padStart(2, '0')}`)
-    gradient.addColorStop(1, `${segment.color}00`)
+    gradient.addColorStop(0, `${segment.color}${Math.floor(segment.depth * 255).toString(16).padStart(2, '0')}`)
+    gradient.addColorStop(1, `${segment.color}33`)
 
-    ctx.fillStyle = gradient
-    ctx.fill()
+    ctx.strokeStyle = gradient
+    ctx.lineWidth = 2 + avgFrequency * 3
 
-    // Add glow effect for high frequencies
-    if (normalizedFrequency > 0.6) {
+    // Add glow effect based on frequency
+    if (avgFrequency > 0.6) {
       ctx.shadowColor = segment.color
-      ctx.shadowBlur = 20 * normalizedFrequency * perspective
-      ctx.fill()
+      ctx.shadowBlur = 15 * avgFrequency
+      ctx.stroke()
       ctx.shadowBlur = 0
+    } else {
+      ctx.stroke()
     }
 
     // Draw connecting lines between segments
     if (i > 0) {
       const prevSegment = segments[i - 1]
-      const prevPerspective = 1 / (prevSegment.z * 0.2 + 1)
-      const prevSize = baseSize * prevPerspective
+      const lineCount = 8
+      const lineAngle = (Math.PI * 2) / lineCount
 
-      for (let side = 0; side < sides; side++) {
-        const angle = segment.rotation + (side * Math.PI * 2) / sides
-        const prevAngle = prevSegment.rotation + (side * Math.PI * 2) / sides
-
-        const x1 = centerX + Math.cos(angle) * size
-        const y1 = centerY + Math.sin(angle) * size
-        const x2 = centerX + Math.cos(prevAngle) * prevSize
-        const y2 = centerY + Math.sin(prevAngle) * prevSize
+      for (let l = 0; l < lineCount; l++) {
+        const angle = segment.rotation + l * lineAngle
+        const freqIndex = Math.floor((l / lineCount) * data.length)
+        const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
+        
+        const x1 = centerX + Math.cos(angle) * segment.radius
+        const y1 = centerY + Math.sin(angle) * segment.radius
+        const x2 = centerX + Math.cos(angle) * prevSegment.radius
+        const y2 = centerY + Math.sin(angle) * prevSegment.radius
 
         const lineGradient = ctx.createLinearGradient(x1, y1, x2, y2)
-        lineGradient.addColorStop(0, `${segment.color}33`)
-        lineGradient.addColorStop(1, `${prevSegment.color}33`)
+        lineGradient.addColorStop(0, `${segment.color}${Math.floor(segment.depth * 255).toString(16).padStart(2, '0')}`)
+        lineGradient.addColorStop(1, `${prevSegment.color}${Math.floor(prevSegment.depth * 255).toString(16).padStart(2, '0')}`)
 
         ctx.beginPath()
         ctx.moveTo(x1, y1)
         ctx.lineTo(x2, y2)
         ctx.strokeStyle = lineGradient
-        ctx.lineWidth = 1
+        ctx.lineWidth = 1 + normalizedValue * 2
         ctx.stroke()
       }
     }

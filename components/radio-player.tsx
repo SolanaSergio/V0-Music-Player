@@ -44,29 +44,43 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
 
   // Initialize audio context and connect to stream
   useEffect(() => {
+    let mounted = true
     const initAudio = async () => {
       try {
+        if (!mounted) return
         setInitializationStatus('Initializing audio context...')
-        await resumeContext()
         
+        // First, ensure audio context is ready
+        await resumeContext()
+        if (!mounted) return
+        
+        // Wait a bit to ensure context is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 100))
+        if (!mounted) return
+
         if (!isInitialized) {
           setInitializationStatus('Audio context not ready. Please wait...')
           return
         }
 
+        // Only attempt connection if we're not already connected or buffering
         if (!isConnected && !isBuffering) {
           setInitializationStatus('Connecting to stream...')
           await connectToStream(`/api/stream/${station.id}`)
+          if (!mounted) return
           setInitializationStatus('Stream connected successfully')
         }
       } catch (err) {
+        if (!mounted) return
         console.error('Failed to initialize audio:', err)
         setInitializationStatus(`Initialization failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
       }
     }
 
-    initAudio()
+    void initAudio()
+    
     return () => {
+      mounted = false
       setInitializationStatus('Cleaning up audio resources...')
       disconnect()
     }
@@ -85,6 +99,14 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
       } else {
         setInitializationStatus('Resuming audio context...')
         await resumeContext()
+        
+        // Wait a bit to ensure context is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        if (!isInitialized) {
+          throw new Error('Audio context not ready')
+        }
+        
         setInitializationStatus('Connecting to stream...')
         await connectToStream(`/api/stream/${station.id}`)
       }
@@ -164,7 +186,7 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
 
         {streamError && (
           <div className="text-sm text-destructive">
-            {streamError || 'Failed to connect to stream'}
+            {streamError.message || 'Failed to connect to stream'}
           </div>
         )}
       </div>

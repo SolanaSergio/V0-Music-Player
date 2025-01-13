@@ -1,9 +1,15 @@
 export type { DrawContext, DrawFunction, RippleEffect } from './types'
+export type { MouseHandlers } from './ripples'
 
 export { drawBars } from './bars'
 export { drawWave } from './wave'
 export { drawCircle } from './circle'
-export { updateRipples, createRipple } from './ripples'
+export { 
+  drawRipples, 
+  createRipple, 
+  handleMouseInteraction,
+  createMouseHandlers 
+} from './ripples'
 export { drawSpectrum } from './spectrum'
 export { drawParticles } from './particles'
 export { drawFrequency } from './frequency'

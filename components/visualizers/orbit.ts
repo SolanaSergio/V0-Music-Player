@@ -1,4 +1,5 @@
-import type { DrawContext } from './types'
+import type { DrawContext } from '@/components/visualizers/types'
+import { applySensitivity, getAverageFrequency } from './utils'
 
 interface Orbiter {
   angle: number
@@ -9,7 +10,7 @@ interface Orbiter {
 }
 
 const orbiters: Orbiter[] = []
-const ORBITER_COUNT = 24
+const maxOrbiters = 50
 
 export const drawOrbit = (
   ctx: CanvasRenderingContext2D,
@@ -18,67 +19,88 @@ export const drawOrbit = (
 ) => {
   const centerX = width / 2
   const centerY = height / 2
-  const maxRadius = Math.min(width, height) * 0.4
+  const baseRadius = Math.min(width, height) * 0.3
 
-  // Initialize orbiters if needed
-  if (orbiters.length === 0) {
-    for (let i = 0; i < ORBITER_COUNT; i++) {
-      orbiters.push({
-        angle: (i / ORBITER_COUNT) * Math.PI * 2,
-        radius: maxRadius * (0.3 + Math.random() * 0.7),
-        speed: 0.02 + Math.random() * 0.03,
-        size: 2 + Math.random() * 4,
-        color: scheme.colors[i % scheme.colors.length]
-      })
+  // Update existing orbiters
+  for (let i = orbiters.length - 1; i >= 0; i--) {
+    const orbiter = orbiters[i]
+    orbiter.angle += orbiter.speed
+    
+    // Remove orbiters that have completed several orbits
+    if (orbiter.angle > Math.PI * 8) {
+      orbiters.splice(i, 1)
     }
   }
 
-  // Calculate frequency bands
-  const bandSize = Math.floor(data.length / ORBITER_COUNT)
-  const frequencyBands = Array.from({ length: ORBITER_COUNT }, (_, i) => {
-    const start = i * bandSize
-    const end = start + bandSize
-    return Array.from(data.slice(start, end)).reduce((a, b) => a + b, 0) / bandSize
-  })
+  // Create new orbiters based on frequency data
+  const avgFrequency = getAverageFrequency(data, sensitivity)
+  const spawnCount = Math.floor(avgFrequency * 3)
 
-  // Update and draw orbiters
-  orbiters.forEach((orbiter, i) => {
-    const normalizedFrequency = (frequencyBands[i] / 255) * sensitivity
+  for (let i = 0; i < spawnCount && orbiters.length < maxOrbiters; i++) {
+    const freqIndex = Math.floor(Math.random() * data.length)
+    const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
     
-    // Update orbiter
-    orbiter.angle += orbiter.speed * normalizedFrequency
-    orbiter.color = scheme.colors[i % scheme.colors.length]
+    orbiters.push({
+      angle: 0,
+      radius: baseRadius * (0.5 + normalizedValue * 0.5),
+      speed: 0.02 + normalizedValue * 0.03,
+      size: 2 + normalizedValue * 8,
+      color: scheme.colors[Math.floor(Math.random() * scheme.colors.length)]
+    })
+  }
 
-    // Calculate position
+  // Draw orbit paths
+  ctx.beginPath()
+  for (let i = 1; i <= 3; i++) {
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, baseRadius * (i / 3), 0, Math.PI * 2)
+    ctx.strokeStyle = `${scheme.colors[i % scheme.colors.length]}33`
+    ctx.stroke()
+  }
+
+  // Draw orbiters with trails
+  orbiters.forEach(orbiter => {
     const x = centerX + Math.cos(orbiter.angle) * orbiter.radius
     const y = centerY + Math.sin(orbiter.angle) * orbiter.radius
 
+    // Draw trail
+    const trailGradient = ctx.createLinearGradient(
+      centerX + Math.cos(orbiter.angle - 0.5) * orbiter.radius,
+      centerY + Math.sin(orbiter.angle - 0.5) * orbiter.radius,
+      x, y
+    )
+    trailGradient.addColorStop(0, `${orbiter.color}00`)
+    trailGradient.addColorStop(1, `${orbiter.color}66`)
+
+    ctx.beginPath()
+    ctx.strokeStyle = trailGradient
+    ctx.lineWidth = orbiter.size / 2
+    ctx.moveTo(
+      centerX + Math.cos(orbiter.angle - 0.5) * orbiter.radius,
+      centerY + Math.sin(orbiter.angle - 0.5) * orbiter.radius
+    )
+    ctx.lineTo(x, y)
+    ctx.stroke()
+
     // Draw orbiter
     ctx.beginPath()
-    ctx.arc(x, y, orbiter.size * normalizedFrequency, 0, Math.PI * 2)
-    ctx.fillStyle = orbiter.color
-    ctx.fill()
-
-    // Draw trail
-    ctx.beginPath()
-    ctx.moveTo(x, y)
-    const trailLength = 0.5 // Half a circle
-    for (let t = 0; t < trailLength; t += 0.1) {
-      const trailAngle = orbiter.angle - t
-      const trailX = centerX + Math.cos(trailAngle) * orbiter.radius
-      const trailY = centerY + Math.sin(trailAngle) * orbiter.radius
-      ctx.lineTo(trailX, trailY)
-    }
+    ctx.arc(x, y, orbiter.size, 0, Math.PI * 2)
     
-    const gradient = ctx.createLinearGradient(x, y, 
-      centerX + Math.cos(orbiter.angle - trailLength) * orbiter.radius,
-      centerY + Math.sin(orbiter.angle - trailLength) * orbiter.radius
-    )
+    // Create gradient for orbiter
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, orbiter.size)
     gradient.addColorStop(0, orbiter.color)
-    gradient.addColorStop(1, `${orbiter.color}00`)
+    gradient.addColorStop(1, `${orbiter.color}33`)
     
-    ctx.strokeStyle = gradient
-    ctx.lineWidth = orbiter.size * normalizedFrequency * 0.5
-    ctx.stroke()
+    ctx.fillStyle = gradient
+
+    // Add glow effect based on frequency
+    if (avgFrequency > 0.6) {
+      ctx.shadowColor = orbiter.color
+      ctx.shadowBlur = orbiter.size * avgFrequency
+      ctx.fill()
+      ctx.shadowBlur = 0
+    } else {
+      ctx.fill()
+    }
   })
 } 

@@ -1,15 +1,16 @@
-import type { DrawContext } from './types'
+import type { DrawContext } from '@/components/visualizers/types'
+import { applySensitivity, getAverageFrequency } from './utils'
 
 interface Ring {
   radius: number
   rotation: number
   speed: number
-  thickness: number
+  opacity: number
   color: string
 }
 
 const rings: Ring[] = []
-const RING_COUNT = 5
+const maxRings = 20
 
 export const drawRings = (
   ctx: CanvasRenderingContext2D,
@@ -20,98 +21,111 @@ export const drawRings = (
   const centerY = height / 2
   const maxRadius = Math.min(width, height) * 0.4
 
-  // Initialize rings if needed
-  if (rings.length === 0) {
-    for (let i = 0; i < RING_COUNT; i++) {
-      rings.push({
-        radius: maxRadius * (0.3 + (i / RING_COUNT) * 0.7),
-        rotation: Math.random() * Math.PI * 2,
-        speed: 0.02 + Math.random() * 0.03,
-        thickness: 5 + Math.random() * 10,
-        color: scheme.colors[i % scheme.colors.length]
-      })
+  // Update existing rings
+  for (let i = rings.length - 1; i >= 0; i--) {
+    const ring = rings[i]
+    ring.rotation += ring.speed
+    ring.opacity -= 0.005
+
+    // Remove rings that have faded out
+    if (ring.opacity <= 0) {
+      rings.splice(i, 1)
     }
   }
 
-  // Calculate frequency bands for rings
-  const bandSize = Math.floor(data.length / RING_COUNT)
-  const frequencyBands = Array.from({ length: RING_COUNT }, (_, i) => {
-    const start = i * bandSize
-    const end = start + bandSize
-    return Array.from(data.slice(start, end)).reduce((a, b) => a + b, 0) / bandSize
-  })
+  // Create new rings based on frequency data
+  const avgFrequency = getAverageFrequency(data, sensitivity)
+  const spawnCount = Math.floor(avgFrequency * 2)
 
-  // Update and draw rings
-  rings.forEach((ring, i) => {
-    const normalizedFrequency = (frequencyBands[i] / 255) * sensitivity
+  for (let i = 0; i < spawnCount && rings.length < maxRings; i++) {
+    const freqIndex = Math.floor(Math.random() * data.length)
+    const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
     
-    // Update ring
-    ring.rotation += ring.speed * normalizedFrequency
-    ring.color = scheme.colors[i % scheme.colors.length]
+    rings.push({
+      radius: maxRadius * (0.2 + Math.random() * 0.8),
+      rotation: Math.random() * Math.PI * 2,
+      speed: (0.02 + normalizedValue * 0.04) * (Math.random() > 0.5 ? 1 : -1),
+      opacity: 0.8 + Math.random() * 0.2,
+      color: scheme.colors[Math.floor(Math.random() * scheme.colors.length)]
+    })
+  }
+
+  // Draw background glow
+  if (avgFrequency > 0.5) {
+    const glowRadius = maxRadius * 1.5 * avgFrequency
+    const glow = ctx.createRadialGradient(
+      centerX, centerY, 0,
+      centerX, centerY, glowRadius
+    )
+    glow.addColorStop(0, `${scheme.colors[0]}33`)
+    glow.addColorStop(1, `${scheme.colors[0]}00`)
     
-    // Draw ring segments
-    const segments = 12
-    const segmentAngle = (Math.PI * 2) / segments
-    
-    for (let s = 0; s < segments; s++) {
-      const startAngle = ring.rotation + s * segmentAngle
-      const endAngle = startAngle + segmentAngle * 0.8 // Leave gap between segments
+    ctx.fillStyle = glow
+    ctx.fillRect(0, 0, width, height)
+  }
+
+  // Draw rings
+  rings.forEach(ring => {
+    ctx.beginPath()
+
+    // Create segments based on frequency data
+    const segments = 32
+    const angleStep = (Math.PI * 2) / segments
+
+    for (let i = 0; i <= segments; i++) {
+      const angle = i * angleStep + ring.rotation
+      const freqIndex = Math.floor((i / segments) * data.length)
+      const normalizedValue = applySensitivity(data[freqIndex], sensitivity)
       
-      ctx.beginPath()
-      ctx.arc(
-        centerX,
-        centerY,
-        ring.radius * (1 + normalizedFrequency * 0.2),
-        startAngle,
-        endAngle
-      )
+      const radiusOffset = normalizedValue * ring.radius * 0.2
+      const currentRadius = ring.radius + radiusOffset
 
-      // Create gradient for segment
-      const gradient = ctx.createRadialGradient(
-        centerX, centerY, ring.radius - ring.thickness,
-        centerX, centerY, ring.radius + ring.thickness
-      )
-      gradient.addColorStop(0, `${ring.color}00`)
-      gradient.addColorStop(0.5, `${ring.color}99`)
-      gradient.addColorStop(1, `${ring.color}00`)
+      const x = centerX + Math.cos(angle) * currentRadius
+      const y = centerY + Math.sin(angle) * currentRadius
 
-      ctx.strokeStyle = gradient
-      ctx.lineWidth = ring.thickness * (1 + normalizedFrequency * 0.5)
-      ctx.stroke()
+      if (i === 0) {
+        ctx.moveTo(x, y)
+      } else {
+        // Create smooth curve between points
+        const prevAngle = (i - 1) * angleStep + ring.rotation
+        const prevFreqIndex = Math.floor(((i - 1) / segments) * data.length)
+        const prevNormalizedValue = applySensitivity(data[prevFreqIndex], sensitivity)
+        
+        const prevRadiusOffset = prevNormalizedValue * ring.radius * 0.2
+        const prevRadius = ring.radius + prevRadiusOffset
 
-      // Add glow effect for high frequencies
-      if (normalizedFrequency > 0.6) {
-        ctx.shadowColor = ring.color
-        ctx.shadowBlur = 20 * normalizedFrequency
-        ctx.stroke()
-        ctx.shadowBlur = 0
+        const prevX = centerX + Math.cos(prevAngle) * prevRadius
+        const prevY = centerY + Math.sin(prevAngle) * prevRadius
+
+        const cpX = (x + prevX) / 2
+        const cpY = (y + prevY) / 2
+        ctx.quadraticCurveTo(prevX, prevY, cpX, cpY)
       }
     }
 
-    // Draw connecting lines between rings
-    if (i > 0) {
-      const prevRing = rings[i - 1]
-      const lineCount = 6
-      const lineAngle = (Math.PI * 2) / lineCount
-      
-      for (let l = 0; l < lineCount; l++) {
-        const angle = ring.rotation + l * lineAngle
-        const x1 = centerX + Math.cos(angle) * prevRing.radius
-        const y1 = centerY + Math.sin(angle) * prevRing.radius
-        const x2 = centerX + Math.cos(angle) * ring.radius
-        const y2 = centerY + Math.sin(angle) * ring.radius
+    ctx.closePath()
 
-        const gradient = ctx.createLinearGradient(x1, y1, x2, y2)
-        gradient.addColorStop(0, `${prevRing.color}33`)
-        gradient.addColorStop(1, `${ring.color}33`)
+    // Create gradient for ring
+    const gradient = ctx.createLinearGradient(
+      centerX - ring.radius,
+      centerY - ring.radius,
+      centerX + ring.radius,
+      centerY + ring.radius
+    )
+    gradient.addColorStop(0, `${ring.color}${Math.floor(ring.opacity * 255).toString(16).padStart(2, '0')}`)
+    gradient.addColorStop(1, `${ring.color}33`)
 
-        ctx.beginPath()
-        ctx.moveTo(x1, y1)
-        ctx.lineTo(x2, y2)
-        ctx.strokeStyle = gradient
-        ctx.lineWidth = 2
-        ctx.stroke()
-      }
+    ctx.strokeStyle = gradient
+    ctx.lineWidth = 2 + avgFrequency * 3
+
+    // Add glow effect based on frequency
+    if (avgFrequency > 0.6) {
+      ctx.shadowColor = ring.color
+      ctx.shadowBlur = 15 * avgFrequency
+      ctx.stroke()
+      ctx.shadowBlur = 0
+    } else {
+      ctx.stroke()
     }
   })
 } 

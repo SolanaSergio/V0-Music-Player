@@ -1,7 +1,6 @@
 import type { ColorScheme } from '@/types/audio'
 
 export interface DrawContext {
-  ctx: CanvasRenderingContext2D
   width: number
   height: number
   scheme: ColorScheme
