@@ -3,35 +3,49 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAudioContext } from '@/components/audio-provider'
 import { throttle } from 'lodash'
-import type { StreamState, StreamError, UseRadioStreamReturn } from '@/types/audio'
 import { StreamErrorType } from '@/types/audio'
+import type { StreamError, TrackMetadata } from '@/types/audio'
+import { recognizeAudio } from '@/lib/audio-recognition'
 
-// Constants
-const LOAD_TIMEOUT = 5000
-const CONNECTION_TIMEOUT = 15000
+// Constants for timeouts and retry limits
+const CONNECTION_TIMEOUT = 10000 // 10 seconds
 const MAX_RECONNECT_ATTEMPTS = 5
 const VOLUME_THROTTLE_MS = 50
+const METADATA_UPDATE_INTERVAL = 5000
+const RECOGNITION_INTERVAL = 20000 // Try to recognize every 20 seconds
+const RECOGNITION_DURATION = 10 // Record 10 seconds of audio for recognition
 
-// Function type declarations
-type HandleStreamErrorFn = (error: Error | null, url: string) => void;
-type ConnectToStreamFn = (url: string) => Promise<void>;
-type DisconnectFn = () => void;
-type SetVolumeFn = (value: number) => void;
-type CleanupFn = () => void;
+// Type definitions
+type ConnectToStreamFn = (url: string) => Promise<void>
+type DisconnectFn = () => void
+type SetVolumeFn = (value: number) => void
+type HandleStreamErrorFn = (error: Error | null, url: string) => void
 
-// Extended audio element interface for iOS support
-interface ExtendedAudioElement extends HTMLAudioElement {
-  playsInline?: boolean;
-  webkitPlaysinline?: boolean;
+interface StreamState {
+  isConnected: boolean
+  isBuffering: boolean
+  error?: StreamError
+}
+
+interface UseRadioStreamReturn {
+  isConnected: boolean
+  isBuffering: boolean
+  error: StreamError | undefined
+  connectToStream: ConnectToStreamFn
+  disconnect: DisconnectFn
+  setVolume: SetVolumeFn
+  analyser: AnalyserNode | null
+  currentMetadata: TrackMetadata | null
+  isRecognizing: boolean
 }
 
 export function useRadioStream(): UseRadioStreamReturn {
   const { audioContext, masterGain, createAnalyser, resumeContext } = useAudioContext()
   
+  // State and refs
   const [streamState, setStreamState] = useState<StreamState>({
-    isBuffering: false,
     isConnected: false,
-    retryCount: 0,
+    isBuffering: false,
     error: undefined
   })
   
@@ -42,17 +56,20 @@ export function useRadioStream(): UseRadioStreamReturn {
   const connectionTimeoutRef = useRef<NodeJS.Timeout>()
   const reconnectCountRef = useRef<number>(0)
   const currentUrlRef = useRef<string>('')
-  const volumeRef = useRef<number>(1)
+  const volumeRef = useRef<number>(0.75)
+  const [currentMetadata, setCurrentMetadata] = useState<TrackMetadata | null>(null)
+  const metadataIntervalRef = useRef<NodeJS.Timeout>()
+  const [isRecognizing, setIsRecognizing] = useState(false)
+  const recognitionIntervalRef = useRef<NodeJS.Timeout>()
+  const audioBufferRef = useRef<Float32Array[]>([])
+  const isRecordingRef = useRef(false)
 
   // State refs
   const handleStreamErrorRef = useRef<HandleStreamErrorFn>()
   const connectToStreamRef = useRef<ConnectToStreamFn>()
 
-  // Add cleanupRef with explicit type
-  const cleanupRef = useRef<CleanupFn | undefined>(undefined)
-
   // Add connection attempt tracking
-  const initialLoadingRef = useRef<boolean>(true)
+  const initialLoadingRef = useRef<boolean>(false)
   const loadingTimeoutRef = useRef<NodeJS.Timeout>()
 
   // Create analyser when audio context is available
@@ -142,13 +159,27 @@ export function useRadioStream(): UseRadioStreamReturn {
   }, [audioContext, resumeContext])
 
   const disconnect = useCallback<DisconnectFn>(() => {
+    // Clear any existing timeouts first
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current)
+    }
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current)
+    }
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current)
+    }
+
+    // Perform cleanup
     cleanup()
     currentUrlRef.current = ''
     reconnectCountRef.current = 0
+    initialLoadingRef.current = true
+
+    // Reset stream state
     setStreamState({
-      isBuffering: false,
+      isBuffering: true,
       isConnected: false,
-      retryCount: 0,
       error: undefined
     })
   }, [cleanup])
@@ -159,38 +190,33 @@ export function useRadioStream(): UseRadioStreamReturn {
       clearTimeout(loadingTimeoutRef.current)
     }
 
-    // Don't show errors during initial loading period unless it's a critical error
+    // Ignore empty src errors (these happen during cleanup)
+    if (error?.message?.includes('Empty src')) {
+      return
+    }
+
+    // During initial loading, keep showing buffering unless it's a permission error
     if (initialLoadingRef.current) {
       if (error?.name === 'NotAllowedError') {
-        // Handle permission errors immediately
-        const streamError: StreamError = {
-          type: StreamErrorType.PLAYBACK_NOT_ALLOWED,
-          message: 'Playback not allowed. Please click again to start.'
-        }
-        setStreamState(prev => ({
-          ...prev,
-          error: streamError,
+        setStreamState({
           isBuffering: false,
-          isConnected: false
-        }))
-      } else {
-        // For other errors, wait for the loading period
-        loadingTimeoutRef.current = setTimeout(() => {
-          initialLoadingRef.current = false
-          if (!streamState.isConnected) {
-            handleStreamErrorRef.current?.(error, url)
+          isConnected: false,
+          error: {
+            type: StreamErrorType.PLAYBACK_NOT_ALLOWED,
+            message: 'Playback not allowed. Please click again to start.'
           }
-        }, LOAD_TIMEOUT)
-        return
+        })
       }
+      return
     }
 
-    let streamError: StreamError = {
-      type: StreamErrorType.UNKNOWN,
-      message: 'An unknown error occurred'
-    }
+    // For all other cases, show error if we're not connected
+    if (error && !streamState.isConnected) {
+      let streamError: StreamError = {
+        type: StreamErrorType.UNKNOWN,
+        message: 'An unknown error occurred'
+      }
 
-    if (error) {
       if (error.name === 'NotAllowedError') {
         streamError = {
           type: StreamErrorType.PLAYBACK_NOT_ALLOWED,
@@ -207,27 +233,25 @@ export function useRadioStream(): UseRadioStreamReturn {
           message: error.message
         }
       }
-    }
 
-    setStreamState(prev => ({
-      ...prev,
-      error: streamError,
-      isBuffering: false,
-      isConnected: false
-    }))
+      setStreamState({
+        isBuffering: false,
+        isConnected: false,
+        error: streamError
+      })
 
-    // Only attempt reconnection for network errors and when not in initial loading
-    if (!initialLoadingRef.current && 
-        streamError.type === StreamErrorType.NETWORK_ERROR && 
-        reconnectCountRef.current < MAX_RECONNECT_ATTEMPTS) {
-      reconnectCountRef.current++
-      const backoffDelay = Math.min(1000 * Math.pow(2, reconnectCountRef.current), 30000)
-      
-      retryTimeoutRef.current = setTimeout(() => {
-        if (connectToStreamRef.current) {
-          connectToStreamRef.current(url)
-        }
-      }, backoffDelay)
+      // Only attempt reconnection for network errors
+      if (streamError.type === StreamErrorType.NETWORK_ERROR && 
+          reconnectCountRef.current < MAX_RECONNECT_ATTEMPTS) {
+        reconnectCountRef.current++
+        const backoffDelay = Math.min(1000 * Math.pow(2, reconnectCountRef.current), 30000)
+        
+        retryTimeoutRef.current = setTimeout(() => {
+          if (connectToStreamRef.current) {
+            connectToStreamRef.current(url)
+          }
+        }, backoffDelay)
+      }
     }
   }, [streamState.isConnected])
 
@@ -255,232 +279,355 @@ export function useRadioStream(): UseRadioStreamReturn {
   }, [throttledVolumeSet])
 
   const setVolume = useCallback<SetVolumeFn>((value: number) => {
-    volumeController.current.set(value)
+    const safeValue = Math.max(0, Math.min(1, value))
+    volumeRef.current = safeValue
+
+    // Update HTML audio element volume
+    if (audioRef.current) {
+      audioRef.current.volume = safeValue
+    }
+
+    // Update Web Audio API gain node
+    if (masterGain && audioContext) {
+      masterGain.gain.setTargetAtTime(safeValue, audioContext.currentTime, 0.01)
+    }
+  }, [audioContext, masterGain])
+
+  // Remove throttled volume control as it's causing issues
+  useEffect(() => {
+    // Set initial volume when audio element is created
+    if (audioRef.current) {
+      audioRef.current.volume = volumeRef.current
+    }
+  }, [])
+
+  // Event handlers for audio element
+  const handleLoadStart = useCallback(() => {
+    const audio = audioRef.current
+    // Only show buffering on initial load and when not paused
+    setStreamState(prev => ({
+      ...prev,
+      isBuffering: !audio?.paused,
+      error: undefined
+    }))
+  }, [])
+
+  const handleCanPlay = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    // Only attempt playback if we're not already connected
+    if (!streamState.isConnected) {
+      audio.play().catch(error => {
+        handleStreamErrorRef.current?.(error, audio.src)
+      })
+    }
+  }, [streamState.isConnected])
+
+  const handlePlaying = useCallback(() => {
+    // Clear any existing timeouts since we're now playing
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current)
+      loadingTimeoutRef.current = undefined
+    }
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current)
+      connectionTimeoutRef.current = undefined
+    }
+
+    // Reset reconnect count and mark as connected
+    reconnectCountRef.current = 0
+    initialLoadingRef.current = false
+
+    // Update stream state to indicate successful connection and not buffering
+    setStreamState({
+      isBuffering: false,
+      isConnected: true,
+      error: undefined
+    })
+
+    // Update media session state
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing'
+    }
+  }, [])
+
+  const handleStalled = useCallback(() => {
+    const audio = audioRef.current
+    // Only show buffering if we're connected, not paused, and actively trying to play
+    if (audio && streamState.isConnected && !audio.paused && audio.currentTime > 0) {
+      setStreamState(prev => ({
+        ...prev,
+        isBuffering: true
+      }))
+    }
+  }, [streamState.isConnected])
+
+  const handleWaiting = useCallback(() => {
+    const audio = audioRef.current
+    // Only show buffering if we're connected, not paused, and actively trying to play
+    if (audio && streamState.isConnected && !audio.paused && audio.currentTime > 0) {
+      setStreamState(prev => ({
+        ...prev,
+        isBuffering: true
+      }))
+    }
+  }, [streamState.isConnected])
+
+  const handleError = useCallback(() => {
+    const audio = audioRef.current
+    if (audio?.error && !audio.error.message?.includes('Empty src')) {
+      const error = new Error(audio.error.message || 'Media playback error')
+      handleStreamErrorRef.current?.(error, audio.src)
+    }
   }, [])
 
   connectToStreamRef.current = useCallback(async (url: string) => {
-    initialLoadingRef.current = true
-    // Run previous cleanup if exists
-    const currentCleanup = cleanupRef.current
-    if (currentCleanup) {
-      currentCleanup()
-      cleanupRef.current = undefined
-    }
-
-    currentUrlRef.current = url
-
     try {
+      // Set initial state
+      setStreamState({
+        isBuffering: true,
+        isConnected: false,
+        error: undefined
+      })
+
+      // Ensure we have an audio context
       await ensureAudioContext()
-      if (!audioContext) {
-        throw new Error('Audio context not available')
-      }
+      if (!audioContext) return
 
-      // Request background audio permission
-      if ('mediaSession' in navigator) {
-        try {
-          await document.querySelector('audio')?.play()
-          document.querySelector('audio')?.pause()
-        } catch (e) {
-          console.warn('Could not request background audio permission:', e)
-        }
-      }
+      // Clean up any existing connection first
+      cleanup()
 
+      // Create and configure audio element
       const audio = new Audio()
       audio.crossOrigin = 'anonymous'
       audio.preload = 'auto'
-      audio.volume = volumeRef.current
-      // Enable background playback
-      audio.autoplay = true
-      // Handle non-standard attributes for cross-browser background playback
-      const audioElement = audio as ExtendedAudioElement
-      audioElement.playsInline = true
-      audioElement.webkitPlaysinline = true
       audioRef.current = audio
 
-      setStreamState(prev => ({
-        ...prev,
-        isBuffering: true,
-        error: undefined
-      }))
+      // Set up audio routing before setting source
+      const source = audioContext.createMediaElementSource(audio)
+      sourceNodeRef.current = source
 
+      // Connect audio nodes
+      if (analyserRef.current && masterGain) {
+        source.connect(analyserRef.current)
+        analyserRef.current.connect(masterGain)
+        masterGain.connect(audioContext.destination)
+      } else if (masterGain) {
+        source.connect(masterGain)
+        masterGain.connect(audioContext.destination)
+      } else {
+        source.connect(audioContext.destination)
+      }
+
+      // Set up event listeners
+      audio.addEventListener('loadstart', handleLoadStart)
+      audio.addEventListener('canplay', handleCanPlay)
+      audio.addEventListener('playing', handlePlaying)
+      audio.addEventListener('waiting', handleWaiting)
+      audio.addEventListener('stalled', handleStalled)
+      audio.addEventListener('error', handleError)
+      audio.addEventListener('pause', () => {
+        setStreamState(prev => ({
+          ...prev,
+          isBuffering: false
+        }))
+      })
+
+      // Set initial volume
+      audio.volume = volumeRef.current
+
+      // Start loading the stream
+      currentUrlRef.current = url
+      audio.src = url
+
+      // Set connection timeout
       connectionTimeoutRef.current = setTimeout(() => {
-        if (handleStreamErrorRef.current) {
-          handleStreamErrorRef.current(new Error('Connection timeout'), url)
-        }
-        if (cleanupRef.current) {
-          cleanupRef.current()
+        if (!streamState.isConnected) {
+          handleStreamErrorRef.current?.(
+            new Error('Connection timeout'),
+            url
+          )
         }
       }, CONNECTION_TIMEOUT)
 
-      // Enable background playback with Media Session API
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: 'Radio Stream',
-          artist: 'Live Radio'
-        })
-        
-        // Set playback state
-        navigator.mediaSession.playbackState = 'playing'
-        
-        // Handle media session actions
-        navigator.mediaSession.setActionHandler('play', () => {
-          audio.play().catch(console.error)
-        })
-        navigator.mediaSession.setActionHandler('pause', () => {
-          audio.pause()
-        })
-        navigator.mediaSession.setActionHandler('stop', () => {
-          audio.pause()
-          audio.currentTime = 0
-        })
-      }
-
-      // Prevent audio context suspension
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') {
-          if (audioContext?.state === 'suspended') {
-            audioContext.resume().catch(console.error)
-          }
-          if (audio.paused) {
-            audio.play().catch(console.error)
-          }
-        }
-      }
-
-      const handleStall = () => {
-        if (streamState.isConnected && handleStreamErrorRef.current) {
-          handleStreamErrorRef.current(new Error('Stream stalled'), url)
-        }
-      }
-
-      document.addEventListener('visibilitychange', handleVisibilityChange)
-      audio.addEventListener('stalled', handleStall)
-      audio.addEventListener('suspend', handleStall)
-
-      audio.src = url
-
-      if (!sourceNodeRef.current) {
-        sourceNodeRef.current = audioContext.createMediaElementSource(audio)
-      }
-
-      const source = sourceNodeRef.current
-      const analyser = analyserRef.current
-
-      if (source) {
-        if (masterGain) {
-          if (analyser) {
-            source.connect(analyser)
-            analyser.connect(masterGain)
-            masterGain.connect(audioContext.destination)
-          } else {
-            source.connect(masterGain)
-            masterGain.connect(audioContext.destination)
-          }
-        } else {
-          source.connect(audioContext.destination)
-        }
-      }
-
-      await new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('Audio load timeout'))
-        }, LOAD_TIMEOUT)
-
-        const handleCanPlay = () => {
-          clearTimeout(timeoutId)
-          resolve(true)
-        }
-
-        const handleError = () => {
-          clearTimeout(timeoutId)
-          if (cleanupRef.current) {
-            cleanupRef.current()
-          }
-          reject(audio.error)
-        }
-
-        audio.addEventListener('canplay', handleCanPlay, { once: true })
-        audio.addEventListener('error', handleError, { once: true })
-      })
-
+      // Attempt playback
       try {
         await audio.play()
-        
-        if (connectionTimeoutRef.current) {
-          clearTimeout(connectionTimeoutRef.current)
-        }
-
-        reconnectCountRef.current = 0
-        
-        setStreamState(prev => ({
-          ...prev,
-          isBuffering: false,
-          isConnected: true,
-          error: undefined
-        }))
-
-        // Store cleanup function
-        cleanupRef.current = () => {
-          document.removeEventListener('visibilitychange', handleVisibilityChange)
-          audio.removeEventListener('stalled', handleStall)
-          audio.removeEventListener('suspend', handleStall)
-          audio.pause()
-          audio.src = ''
-          if (source) {
-            source.disconnect()
-          }
-          if (analyser) {
-            analyser.disconnect()
-          }
-          audioRef.current = null
-          sourceNodeRef.current = null
-        }
-
-      } catch (playError) {
-        if (playError instanceof Error && playError.name === 'NotAllowedError') {
-          if (handleStreamErrorRef.current) {
-            handleStreamErrorRef.current(new Error('Playback requires user interaction'), url)
-          }
-        } else {
-          if (handleStreamErrorRef.current) {
-            handleStreamErrorRef.current(playError instanceof Error ? playError : null, url)
-          }
-        }
-        if (cleanupRef.current) {
-          cleanupRef.current()
+      } catch (error) {
+        if (error instanceof Error && error.name === 'NotAllowedError') {
+          handleStreamErrorRef.current?.(error, url)
         }
       }
-
     } catch (error) {
-      if (handleStreamErrorRef.current) {
-        handleStreamErrorRef.current(error instanceof Error ? error : null, url)
-      }
-      const finalCleanup = cleanupRef.current
-      if (finalCleanup) {
-        finalCleanup()
+      handleStreamErrorRef.current?.(error as Error, url)
+    }
+  }, [
+    audioContext,
+    masterGain,
+    streamState.isConnected,
+    cleanup,
+    ensureAudioContext,
+    handleLoadStart,
+    handleCanPlay,
+    handlePlaying,
+    handleWaiting,
+    handleStalled,
+    handleError
+  ])
+
+  // Function to parse ICY metadata
+  const parseICYMetadata = useCallback((metadata: string) => {
+    const streamTitle = metadata.match(/StreamTitle='([^']*)'/)?.[1]
+    if (streamTitle) {
+      const [artist, title] = streamTitle.split(' - ')
+      return {
+        artist: artist?.trim() || 'Unknown Artist',
+        title: title?.trim() || 'Unknown Track',
+        timestamp: Date.now()
       }
     }
-  }, [audioContext, masterGain, streamState.isConnected, ensureAudioContext])
+    return null
+  }, [])
 
-  // Handle page visibility changes
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && audioContext?.state === 'suspended') {
-        audioContext.resume()
+  // Function to update metadata
+  const updateMetadata = useCallback(async () => {
+    try {
+      if (!currentUrlRef.current) return
+
+      const response = await fetch('/api/stream/metadata', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: currentUrlRef.current })
+      })
+
+      if (!response.ok) return
+
+      const data = await response.json()
+      if (data.metadata) {
+        const metadata = parseICYMetadata(data.metadata)
+        if (metadata) {
+          setCurrentMetadata(metadata)
+        }
       }
+    } catch {
+      // Silently handle metadata fetch errors
+      return
+    }
+  }, [parseICYMetadata])
+
+  // Start metadata polling when connected
+  useEffect(() => {
+    if (streamState.isConnected) {
+      updateMetadata()
+      metadataIntervalRef.current = setInterval(updateMetadata, METADATA_UPDATE_INTERVAL)
     }
 
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [audioContext])
-
-  // Cleanup on unmount
-  useEffect(() => {
     return () => {
-      cleanup()
-      volumeController.current.cancel()
+      if (metadataIntervalRef.current) {
+        clearInterval(metadataIntervalRef.current)
+      }
     }
-  }, [cleanup, volumeController])
+  }, [streamState.isConnected, updateMetadata])
+
+  // Function to stop recording and recognize audio
+  const stopRecording = useCallback(async () => {
+    if (!isRecordingRef.current) return
+    
+    isRecordingRef.current = false
+    setIsRecognizing(true)
+    
+    try {
+      // Combine all recorded buffers
+      const totalLength = audioBufferRef.current.reduce((acc, buf) => acc + buf.length, 0)
+      const combinedBuffer = new Float32Array(totalLength)
+      let offset = 0
+      
+      for (const buffer of audioBufferRef.current) {
+        combinedBuffer.set(buffer, offset)
+        offset += buffer.length
+      }
+      
+      // Convert to 16-bit PCM
+      const pcmBuffer = new Int16Array(combinedBuffer.length)
+      for (let i = 0; i < combinedBuffer.length; i++) {
+        const s = Math.max(-1, Math.min(1, combinedBuffer[i]))
+        pcmBuffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF
+      }
+      
+      // Recognize the audio
+      const recognizedSong = await recognizeAudio(pcmBuffer.buffer)
+      
+      if (recognizedSong) {
+        setCurrentMetadata(prev => ({
+          ...prev,
+          recognized: recognizedSong,
+          lyrics: recognizedSong.lyrics,
+          artist: recognizedSong.artist,
+          title: recognizedSong.title,
+          timestamp: recognizedSong.timestamp
+        }))
+      }
+    } catch (error) {
+      console.error('Error recognizing audio:', error)
+    } finally {
+      setIsRecognizing(false)
+      audioBufferRef.current = []
+    }
+  }, [])
+
+  // Function to record audio for recognition
+  const startRecording = useCallback(() => {
+    if (!analyserRef.current || isRecordingRef.current) return
+    
+    isRecordingRef.current = true
+    audioBufferRef.current = []
+    
+    const sampleRate = audioContext?.sampleRate || 44100
+    const bufferLength = analyserRef.current.frequencyBinCount
+    const recordingBuffer = new Float32Array(bufferLength)
+    
+    const recordFrame = () => {
+      if (!isRecordingRef.current || !analyserRef.current) return
+      
+      analyserRef.current.getFloatTimeDomainData(recordingBuffer)
+      audioBufferRef.current.push(new Float32Array(recordingBuffer))
+      
+      // Stop after RECOGNITION_DURATION seconds
+      if (audioBufferRef.current.length >= RECOGNITION_DURATION * (sampleRate / bufferLength)) {
+        stopRecording()
+        return
+      }
+      
+      requestAnimationFrame(recordFrame)
+    }
+    
+    recordFrame()
+  }, [audioContext, stopRecording])
+
+  // Start recognition cycle when connected
+  useEffect(() => {
+    if (streamState.isConnected && analyserRef.current) {
+      // Initial recognition
+      startRecording()
+      
+      // Set up interval for periodic recognition
+      recognitionIntervalRef.current = setInterval(() => {
+        if (!isRecordingRef.current) {
+          startRecording()
+        }
+      }, RECOGNITION_INTERVAL)
+    }
+    
+    return () => {
+      if (recognitionIntervalRef.current) {
+        clearInterval(recognitionIntervalRef.current)
+      }
+      isRecordingRef.current = false
+    }
+  }, [streamState.isConnected, startRecording])
 
   return {
     isConnected: streamState.isConnected,
@@ -489,7 +636,9 @@ export function useRadioStream(): UseRadioStreamReturn {
     connectToStream: connectToStreamRef.current!,
     disconnect,
     setVolume,
-    analyser: analyserRef.current
+    analyser: analyserRef.current,
+    currentMetadata,
+    isRecognizing
   }
 }
 

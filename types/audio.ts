@@ -169,14 +169,34 @@ export interface StreamState {
   error?: StreamError
 }
 
+export interface RecognizedSong {
+  title: string
+  artist: string
+  album?: string
+  releaseDate?: string
+  lyrics?: string
+  confidence: number
+  timestamp: number
+}
+
+export interface TrackMetadata {
+  artist: string
+  title: string
+  timestamp: number
+  recognized?: RecognizedSong
+  lyrics?: string
+}
+
 export interface UseRadioStreamReturn {
   isConnected: boolean
   isBuffering: boolean
-  error?: StreamError
+  error: StreamError | undefined
   connectToStream: (url: string) => Promise<void>
   disconnect: () => void
   setVolume: (value: number) => void
   analyser: AnalyserNode | null
+  currentMetadata: TrackMetadata | null
+  isRecognizing: boolean
 }
 
 export interface AudioProviderProps {

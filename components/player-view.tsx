@@ -49,7 +49,16 @@ export function PlayerView() {
       : featuredTracks[0]
 
   const station = stationId ? radioStations.find(s => s.id === stationId) : null
-  const { isConnected, isBuffering, error, connectToStream, disconnect, analyser } = useRadioStream()
+  const { 
+    isConnected, 
+    isBuffering, 
+    error, 
+    connectToStream, 
+    disconnect, 
+    analyser,
+    currentMetadata,
+    isRecognizing 
+  } = useRadioStream()
 
   const [currentTrack, setCurrentTrack] = useState<Track>(initialTrack || featuredTracks[0])
   const [isPlaying, setIsPlaying] = useState(false)
@@ -438,17 +447,23 @@ export function PlayerView() {
             initial={{ opacity: 0, y: "100%" }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: "100%" }}
-            className="fixed inset-x-0 bottom-0 h-96 bg-background/95 backdrop-blur-sm border-t border-border/20 z-50"
+            className="fixed inset-x-0 bottom-0 h-72 bg-background/95 backdrop-blur-sm border-t border-border/20 z-50"
           >
-            <LyricsDisplay
-              lyrics={[
-                "Loading lyrics...",
-                "This is a placeholder for lyrics display",
-                "Real lyrics would be fetched from an API",
-              ]}
-              currentTime={0}
-              onClose={() => setShowLyrics(false)}
-            />
+            <div className="container max-w-7xl mx-auto relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-2"
+                onClick={() => setShowLyrics(false)}
+              >
+                <ChevronDown className="h-5 w-5" />
+              </Button>
+              <LyricsDisplay
+                metadata={currentMetadata}
+                isRecognizing={isRecognizing}
+                className="mt-4 pr-12"
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

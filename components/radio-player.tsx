@@ -6,6 +6,7 @@ import { useRadioStream } from '@/hooks/use-radio-stream'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { AudioVisualizer } from '@/components/audio-visualizer'
+import { LyricsDisplay } from '@/components/lyrics-display'
 import type { RadioStation, VisualizerMode, ColorScheme } from '@/types/audio'
 import { cn } from '@/lib/utils'
 import { Play, Pause, Volume2, VolumeX, Settings2 } from 'lucide-react'
@@ -24,7 +25,7 @@ interface RadioPlayerProps {
 }
 
 export function RadioPlayer({ station, className }: RadioPlayerProps) {
-  const { resumeContext, isInitialized, error: contextError } = useAudioContext()
+  const { resumeContext, isInitialized, error: contextError, setVolume: setMasterVolume } = useAudioContext()
   const [volume, setVolume] = useState(0.75)
   const [isMuted, setIsMuted] = useState(false)
   const [visualizerMode, setVisualizerMode] = useState<VisualizerMode['id']>('bars')
@@ -39,7 +40,9 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
     connectToStream,
     disconnect,
     setVolume: setStreamVolume,
-    analyser
+    analyser,
+    currentMetadata,
+    isRecognizing
   } = useRadioStream()
 
   // Initialize audio context and connect to stream
@@ -88,8 +91,12 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
 
   // Handle volume changes
   useEffect(() => {
-    setStreamVolume(isMuted ? 0 : volume)
-  }, [volume, isMuted, setStreamVolume])
+    const effectiveVolume = isMuted ? 0 : volume
+    // Ensure volume is within valid range
+    const safeVolume = Math.max(0, Math.min(1, effectiveVolume))
+    setStreamVolume(safeVolume)
+    setMasterVolume(safeVolume)
+  }, [volume, isMuted, setStreamVolume, setMasterVolume])
 
   const togglePlayback = async () => {
     try {
@@ -148,6 +155,14 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
           )}
         </Button>
 
+        {/* Track Info */}
+        {isConnected && currentMetadata && (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{currentMetadata.title}</p>
+            <p className="text-xs text-muted-foreground truncate">{currentMetadata.artist}</p>
+          </div>
+        )}
+
         <Button
           variant="ghost"
           size="icon"
@@ -167,7 +182,10 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
           max={100}
           step={1}
           className="w-[120px]"
-          onValueChange={([value]) => setVolume(value / 100)}
+          onValueChange={([value]) => {
+            const newVolume = value / 100
+            setVolume(Math.max(0, Math.min(1, newVolume)))
+          }}
           aria-label="Volume"
         />
 
@@ -253,6 +271,15 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
             className="h-full w-full"
           />
         </div>
+      )}
+
+      {/* Lyrics Display */}
+      {isConnected && (
+        <LyricsDisplay
+          metadata={currentMetadata}
+          isRecognizing={isRecognizing}
+          className="mt-4"
+        />
       )}
 
       {/* Status message display */}
