@@ -193,6 +193,37 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
     }
   }, [currentTrack, connectToStream])
 
+  // Add visibility change handler
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!audioRef.current) return
+
+      try {
+        if (document.visibilityState === 'visible') {
+          // Only attempt to play if it was playing before
+          if (isPlaying) {
+            if (audioContext?.state === 'suspended') {
+              await audioContext.resume()
+            }
+            // Use play() with catch to handle potential autoplay restrictions
+            audioRef.current.play().catch(err => {
+              console.warn('Could not auto-resume playback:', err)
+              setIsPlaying(false)
+            })
+          }
+        }
+      } catch (err) {
+        console.warn('Error handling visibility change in audio:', err)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [audioContext, isPlaying])
+
   // Playback controls
   const play = useCallback(async () => {
     if (!audioRef.current) return

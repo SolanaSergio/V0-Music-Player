@@ -244,9 +244,8 @@ export function AudioProvider({
       const ctx = audioContextRef.current
       if (!ctx) return
 
-      if (document.hidden && ctx.state === 'running') {
-        void ctx.suspend()
-      } else if (!document.hidden && ctx.state === 'suspended') {
+      // Only resume if suspended, but never suspend when hidden
+      if (!document.hidden && ctx.state === 'suspended') {
         void resumeContext().catch(console.error)
       }
     }
