@@ -148,9 +148,29 @@ export function PlayerView() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold">{currentTrack.title}</h1>
-              <p className="text-muted-foreground">
-                {currentTrack.isLive ? 'Now Playing' : currentTrack.artist}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-muted-foreground">
+                  {currentTrack.isLive ? 'Now Playing' : currentTrack.artist}
+                </p>
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center gap-2 text-sm text-primary/80"
+                >
+                  <span className="inline-block h-1 w-1 rounded-full bg-primary/60" />
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 1, 0] }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      repeatDelay: 1,
+                    }}
+                  >
+                    Frequnecies heal and destroy surrond yourself with the power of the universe
+                  </motion.span>
+                </motion.div>
+              </div>
             </div>
           </div>
         </div>
@@ -310,20 +330,24 @@ export function PlayerView() {
                   {(station ? isConnected : isPlaying) ? (
                     <motion.div
                       key="pause"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.5, opacity: 0 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="flex items-center justify-center"
                     >
                       <Pause className="h-8 w-8" />
                     </motion.div>
                   ) : (
                     <motion.div
                       key="play"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.5, opacity: 0 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="flex items-center justify-center"
                     >
-                      <Play className="h-8 w-8" />
+                      <Play className="h-8 w-8 translate-x-0.5" />
                     </motion.div>
                   )}
                 </AnimatePresence>

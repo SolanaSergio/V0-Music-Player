@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { motion } from 'framer-motion'
 
 export function Header() {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
@@ -80,6 +81,27 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ 
+            opacity: [0, 1, 1, 1, 1, 0],
+            x: [50, 0, 0, 0, 0, 50],
+            scale: [0.95, 1, 1.02, 1, 0.98, 0.95],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            repeatDelay: 15,
+            ease: "easeInOut",
+            times: [0, 0.1, 0.3, 0.5, 0.8, 1],
+          }}
+          className="text-sm font-medium ml-auto mr-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80 hover:scale-105 transition-transform"
+          style={{
+            textShadow: "0 0 8px rgba(var(--primary), 0.3)"
+          }}
+        >
+          Created By S
+        </motion.div>
       </div>
     </header>
   )
