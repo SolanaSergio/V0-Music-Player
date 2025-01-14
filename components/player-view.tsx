@@ -22,9 +22,9 @@ import { VolumeSlider } from '@/components/volume-slider'
 import { useAudioContext } from '@/components/audio-provider'
 import { cn } from "@/lib/utils"
 import { featuredTracks } from '@/data/audio'
-import { radioStations } from '@/data/radio-stations'
+import { radioStations } from '@/data/audio'
 import { visualizerModes, colorSchemes } from '@/config/visualizer'
-import type { VisualizerMode, ColorScheme, Track, GenreIconType } from '@/types/audio'
+import type { VisualizerMode, ColorScheme, Track, GenreIconType, RadioStation } from '@/types/audio'
 import { useRadioStream } from '@/hooks/use-radio-stream'
 
 export function PlayerView() {
@@ -38,12 +38,12 @@ export function PlayerView() {
   const initialTrack = stationId 
     ? {
         id: stationId,
-        title: radioStations.find(s => s.id === stationId)?.name || 'Unknown Station',
+        title: radioStations.find((s: RadioStation) => s.id === stationId)?.name || 'Unknown Station',
         artist: 'Live Radio',
-        album: radioStations.find(s => s.id === stationId)?.description || '',
+        album: radioStations.find((s: RadioStation) => s.id === stationId)?.description || '',
         duration: 0,
         genre: 'electronic' as GenreIconType,
-        image: radioStations.find(s => s.id === stationId)?.image || '',
+        image: radioStations.find((s: RadioStation) => s.id === stationId)?.image || '',
         audioUrl: `/api/stream/${stationId}`,
         isLive: true
       }
@@ -51,7 +51,7 @@ export function PlayerView() {
       ? featuredTracks.find(track => track.id === trackId) 
       : featuredTracks[0]
 
-  const station = stationId ? radioStations.find(s => s.id === stationId) : null
+  const station = stationId ? radioStations.find((s: RadioStation) => s.id === stationId) : null
   const { 
     isConnected, 
     isBuffering, 
@@ -99,7 +99,7 @@ export function PlayerView() {
   // Update current track when URL parameter changes
   useEffect(() => {
     if (trackId) {
-      const track = featuredTracks.find(t => t.id === trackId)
+      const track = featuredTracks.find((t: Track) => t.id === trackId)
       if (track) {
         setCurrentTrack(track)
         setIsPlaying(true) // Auto-play when track changes
@@ -209,7 +209,7 @@ export function PlayerView() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {visualizerModes.map(visualizer => (
+                  {visualizerModes.map((visualizer: VisualizerMode) => (
                     <SelectItem key={visualizer.id} value={visualizer.id}>
                       <div className="flex items-center">
                         <visualizer.icon className="mr-2 h-4 w-4" />
@@ -228,11 +228,11 @@ export function PlayerView() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {colorSchemes.map(scheme => (
+                  {colorSchemes.map((scheme: ColorScheme) => (
                     <SelectItem key={scheme.id} value={scheme.id}>
                       <div className="flex items-center gap-2">
                         <div className="flex h-4 items-center gap-px">
-                          {scheme.colors.map((color, i) => (
+                          {scheme.colors.map((color: string, i: number) => (
                             <div
                               key={i}
                               className="h-full w-1"

@@ -1,4 +1,5 @@
-import { radioStations } from '@/data/radio-stations'
+import { radioStations } from '@/data/audio'
+import type { RadioStation } from '@/types/audio'
 
 // Common audio MIME types and their extensions
 const AUDIO_MIME_TYPES = {
@@ -72,7 +73,7 @@ export async function checkStreamStatus(url: string): Promise<boolean> {
     if (!response.ok && url.startsWith('/api/stream/')) {
       // If proxy fails, try direct URL
       const stationId = url.split('/').pop()
-      const station = radioStations.find(s => s.id === stationId)
+      const station = radioStations.find((s: RadioStation) => s.id === stationId)
       if (station?.directStreamUrl) {
         console.log('Checking direct URL status:', station.directStreamUrl)
         const directResponse = await fetch(station.directStreamUrl, {

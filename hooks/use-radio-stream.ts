@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAudioContext } from '@/components/audio-provider'
 import { throttle } from 'lodash'
-import { StreamErrorType } from '@/types/audio'
+import { StreamErrorType, RadioStation } from '@/types/audio'
 import type { StreamError, TrackMetadata } from '@/types/audio'
 import { recognizeAudio } from '@/lib/audio-recognition'
+import { fetchLyrics } from '@/lib/lyrics-fetcher'
+import { radioStations } from '@/data/audio'
 
 // Constants for timeouts and retry limits
 const CONNECTION_TIMEOUT = 10000 // 10 seconds
@@ -495,12 +497,21 @@ export function useRadioStream(): UseRadioStreamReturn {
     try {
       if (!currentUrlRef.current) return
 
+      // Get the radio station details
+      const stationId = currentUrlRef.current.split('/').pop()
+      const station = radioStations.find((s: RadioStation) => s.id === stationId)
+      
+      if (!station?.directStreamUrl) {
+        console.warn('No direct stream URL available for metadata fetching')
+        return
+      }
+
       const response = await fetch('/api/stream/metadata', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: currentUrlRef.current })
+        body: JSON.stringify({ url: station.directStreamUrl })
       })
 
       if (!response.ok) return
@@ -509,11 +520,16 @@ export function useRadioStream(): UseRadioStreamReturn {
       if (data.metadata) {
         const metadata = parseICYMetadata(data.metadata)
         if (metadata) {
-          setCurrentMetadata(metadata)
+          // Fetch lyrics when metadata changes
+          const lyricsResponse = await fetchLyrics(metadata.artist, metadata.title)
+          setCurrentMetadata({
+            ...metadata,
+            lyrics: lyricsResponse.success ? lyricsResponse.lyrics : undefined
+          })
         }
       }
-    } catch {
-      // Silently handle metadata fetch errors
+    } catch (error) {
+      console.error('Error updating metadata:', error)
       return
     }
   }, [parseICYMetadata])

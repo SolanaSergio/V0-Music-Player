@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation"
 import { Play, Radio } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { radioStations } from "@/data/radio-stations"
+import { radioStations } from "@/data/audio"
+import type { RadioStation } from '@/types/audio'
 
 export function HeroBanner() {
   const router = useRouter()
@@ -18,7 +19,7 @@ export function HeroBanner() {
 
   const handleStartListening = () => {
     // Start with the first radio station
-    const firstStation = radioStations[0]
+    const firstStation: RadioStation = radioStations[0]
     if (firstStation) {
       router.push(`/player?station=${firstStation.id}`)
     }

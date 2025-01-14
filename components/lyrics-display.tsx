@@ -18,9 +18,8 @@ export function LyricsDisplay({ metadata, isRecognizing, className }: LyricsDisp
 
   if (!metadata) return null
 
-  const hasLyrics = metadata.lyrics || metadata.recognized?.lyrics
-  const lyrics = metadata.lyrics || metadata.recognized?.lyrics || ''
-  const isRecognized = !!metadata.recognized
+  const hasLyrics = metadata.lyrics
+  const lyrics = metadata.lyrics || ''
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -28,10 +27,10 @@ export function LyricsDisplay({ metadata, isRecognizing, className }: LyricsDisp
         <div className="flex items-center gap-2">
           <Mic2 className={cn(
             'h-4 w-4 transition-opacity',
-            isRecognizing ? 'animate-pulse opacity-100' : 'opacity-50'
+            isRecognizing ? 'animate-pulse opacity-100' : hasLyrics ? 'opacity-100' : 'opacity-50'
           )} />
           <span className="text-sm font-medium">
-            {isRecognizing ? 'Identifying song...' : isRecognized ? 'Song identified' : 'Lyrics'}
+            {isRecognizing ? 'Searching for lyrics...' : hasLyrics ? 'Lyrics found' : 'No lyrics available'}
           </span>
         </div>
         {hasLyrics && (
@@ -45,15 +44,9 @@ export function LyricsDisplay({ metadata, isRecognizing, className }: LyricsDisp
         )}
       </div>
 
-      {isRecognized && metadata.recognized && (
+      {metadata.artist && metadata.title && (
         <div className="text-sm text-muted-foreground">
-          <p>Identified as &ldquo;{metadata.recognized.title}&rdquo; by {metadata.recognized.artist}</p>
-          {metadata.recognized.album && (
-            <p>Album: {metadata.recognized.album}</p>
-          )}
-          {metadata.recognized.releaseDate && (
-            <p>Released: {metadata.recognized.releaseDate}</p>
-          )}
+          <p>&ldquo;{metadata.title}&rdquo; by {metadata.artist}</p>
         </div>
       )}
 
@@ -70,7 +63,7 @@ export function LyricsDisplay({ metadata, isRecognizing, className }: LyricsDisp
 
       {!hasLyrics && !isRecognizing && (
         <div className="text-sm text-muted-foreground">
-          No lyrics available for this track.
+          Lyrics will appear here when available.
         </div>
       )}
     </div>

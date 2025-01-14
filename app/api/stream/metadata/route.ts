@@ -1,38 +1,43 @@
 import { NextResponse } from 'next/server'
 
-async function fetchStreamMetadata(url: string): Promise<string | null> {
+async function fetchStreamMetadata(url: string) {
   try {
+    // Ensure the URL is absolute
+    if (!url.startsWith('http')) {
+      throw new Error('Invalid stream URL')
+    }
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Icy-MetaData': '1', // Request metadata
-        'User-Agent': 'V0MusicPlayer/1.0'
+        'Icy-MetaData': '1',
+        'User-Agent': 'V0MusicPlayer/1.0',
+        'Accept': 'audio/mpeg, audio/mp3, */*'
       }
     })
 
-    // Check for ICY metadata in headers
-    const icyName = response.headers.get('icy-name')
-    const icyDescription = response.headers.get('icy-description')
-
-    // If we have metadata in headers, return it
-    if (icyName || icyDescription) {
-      const metadata = []
-      if (icyName) metadata.push(icyName)
-      if (icyDescription) metadata.push(icyDescription)
-      return `StreamTitle='${metadata.join(' - ')}'`
+    if (!response.ok) {
+      throw new Error('Failed to fetch stream')
     }
 
-    // If no metadata found
-    return null
+    // Try to get metadata from various headers
+    const metadata = 
+      response.headers.get('icy-metaint') || 
+      response.headers.get('icy-metadata') ||
+      response.headers.get('icy-name') ||
+      response.headers.get('icy-description')
+
+    return metadata
   } catch (error) {
     console.error('Error fetching stream metadata:', error)
-    return null
+    throw error
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const { url } = await request.json()
+    const body = await request.json()
+    const { url } = body
 
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 })
@@ -42,7 +47,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ metadata })
   } catch (error) {
-    console.error('Error in metadata endpoint:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error in metadata route:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch metadata' },
+      { status: 500 }
+    )
   }
 } 

@@ -215,3 +215,19 @@ export interface AudioMessage {
   }
 }
 
+export interface LyricsResponse {
+  success: boolean
+  lyrics?: string
+  error?: string
+}
+
+export interface GeniusSearchHit {
+  result: {
+    id: number
+    title: string
+    primary_artist: {
+      name: string
+    }
+  }
+}
+

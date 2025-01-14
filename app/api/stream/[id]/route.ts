@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { radioStations } from '@/data/radio-stations'
+import { radioStations } from '@/data/audio'
+import type { RadioStation } from '@/types/audio'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'edge'
@@ -23,7 +24,7 @@ export async function GET(
   try {
     console.log('Stream request received for station:', params.id)
     
-    const station = radioStations.find(s => s.id === params.id)
+    const station = radioStations.find((s: RadioStation) => s.id === params.id)
     if (!station) {
       console.error('Station not found:', params.id)
       return new NextResponse('Station not found', { status: 404 })
