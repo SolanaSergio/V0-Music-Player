@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Share2, ListMusic, Mic2, Maximize2, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, VolumeX, Minimize2, ChevronDown } from 'lucide-react'
+import { Heart, Share2, ListMusic, Mic2, Maximize2, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Minimize2, ChevronDown } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import {
@@ -18,6 +18,8 @@ import { VolumeEqualizer } from '@/components/volume-equalizer'
 import { QueueManager } from '@/components/queue-manager'
 import { ShareModal } from '@/components/share-modal'
 import { LyricsDisplay } from '@/components/lyrics-display'
+import { VolumeSlider } from '@/components/volume-slider'
+import { useAudioContext } from '@/components/audio-provider'
 import { cn } from "@/lib/utils"
 import { featuredTracks } from '@/data/audio'
 import { radioStations } from '@/data/radio-stations'
@@ -30,6 +32,7 @@ export function PlayerView() {
   const searchParams = useSearchParams()
   const trackId = searchParams.get('track')
   const stationId = searchParams.get('station')
+  const { setVolume: setMasterVolume } = useAudioContext()
 
   // Find the requested track/station or default to the first track
   const initialTrack = stationId 
@@ -54,7 +57,8 @@ export function PlayerView() {
     isBuffering, 
     error, 
     connectToStream, 
-    disconnect, 
+    disconnect,
+    setVolume: setStreamVolume,
     analyser,
     currentMetadata,
     isRecognizing 
@@ -72,6 +76,13 @@ export function PlayerView() {
   const [currentVisualizer, setCurrentVisualizer] = useState(visualizerModes[0])
   const [currentColorScheme, setCurrentColorScheme] = useState(colorSchemes[0])
   const [sensitivity, setSensitivity] = useState(1.5)
+
+  // Handle volume changes
+  useEffect(() => {
+    const safeVolume = Math.max(0, Math.min(1, volume))
+    setMasterVolume(safeVolume)
+    setStreamVolume(safeVolume)
+  }, [volume, setMasterVolume, setStreamVolume])
 
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
@@ -390,27 +401,7 @@ export function PlayerView() {
               </Button>
               <VolumeEqualizer className="h-10 w-10 rounded-full transition-all duration-300" />
               <div className="group flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-full transition-all duration-300"
-                  onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
-                >
-                  {volume === 0 ? (
-                    <VolumeX className="h-4 w-4" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
-                </Button>
-                <div className="w-0 overflow-hidden transition-all duration-300 group-hover:w-24">
-                  <Slider
-                    value={[volume * 100]}
-                    max={100}
-                    step={1}
-                    className="w-24"
-                    onValueChange={([value]) => setVolume(value / 100)}
-                  />
-                </div>
+                <VolumeSlider value={volume * 100} onChange={(value) => setVolume(value / 100)} />
               </div>
               <QueueManager
                 currentTrack={currentTrack}
@@ -504,4 +495,3 @@ export function PlayerView() {
     </div>
   )
 }
-
