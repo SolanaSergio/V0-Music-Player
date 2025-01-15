@@ -116,6 +116,50 @@ export function PlayerView() {
     }
   }, [currentTrack, router, searchParams])
 
+  // Add functions to handle station switching
+  const getNextStation = (currentStationId: string | null) => {
+    if (!currentStationId) return radioStations[0]
+    const currentIndex = radioStations.findIndex(s => s.id === currentStationId)
+    return radioStations[(currentIndex + 1) % radioStations.length]
+  }
+
+  const getPreviousStation = (currentStationId: string | null) => {
+    if (!currentStationId) return radioStations[radioStations.length - 1]
+    const currentIndex = radioStations.findIndex(s => s.id === currentStationId)
+    return radioStations[(currentIndex - 1 + radioStations.length) % radioStations.length]
+  }
+
+  const handleStationChange = async (newStation: RadioStation) => {
+    if (isConnected) {
+      disconnect()
+    }
+    
+    const newTrack = {
+      id: newStation.id,
+      title: newStation.name,
+      artist: 'Live Radio',
+      album: newStation.description,
+      duration: 0,
+      genre: newStation.genre as GenreIconType,
+      image: newStation.image,
+      audioUrl: `/api/stream/${newStation.id}`,
+      isLive: true
+    }
+    
+    setCurrentTrack(newTrack)
+    const params = new URLSearchParams(searchParams)
+    params.delete('track')
+    params.set('station', newStation.id)
+    router.replace(`/player?${params.toString()}`)
+    
+    try {
+      await connectToStream(`/api/stream/${newStation.id}`)
+      setIsPlaying(true)
+    } catch (err) {
+      console.error('Failed to connect to new station:', err)
+    }
+  }
+
   return (
     <div className={cn(
       "relative min-h-[calc(100vh-4rem)] overflow-hidden transition-all duration-700",
@@ -298,6 +342,13 @@ export function PlayerView() {
                 variant="ghost"
                 size="icon"
                 className="h-12 w-12 rounded-full transition-all duration-300 hover:scale-110"
+                onClick={() => {
+                  if (stationId) {
+                    const prevStation = getPreviousStation(stationId)
+                    handleStationChange(prevStation)
+                  }
+                }}
+                disabled={!stationId}
               >
                 <SkipBack className="h-5 w-5" />
               </Button>
@@ -356,6 +407,13 @@ export function PlayerView() {
                 variant="ghost"
                 size="icon"
                 className="h-12 w-12 rounded-full transition-all duration-300 hover:scale-110"
+                onClick={() => {
+                  if (stationId) {
+                    const nextStation = getNextStation(stationId)
+                    handleStationChange(nextStation)
+                  }
+                }}
+                disabled={!stationId}
               >
                 <SkipForward className="h-5 w-5" />
               </Button>
