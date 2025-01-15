@@ -480,16 +480,40 @@ export function useRadioStream(): UseRadioStreamReturn {
 
   // Function to parse ICY metadata
   const parseICYMetadata = useCallback((metadata: string) => {
-    const streamTitle = metadata.match(/StreamTitle='([^']*)'/)?.[1]
-    if (streamTitle) {
-      const [artist, title] = streamTitle.split(' - ')
+    try {
+      // Try StreamTitle format first
+      const streamTitleMatch = metadata.match(/StreamTitle='([^']*)'/)?.[1]
+      if (streamTitleMatch) {
+        const [artist, title] = streamTitleMatch.split(' - ')
+        return {
+          artist: artist?.trim() || streamTitleMatch.trim(),
+          title: title?.trim() || 'Unknown Track',
+          timestamp: Date.now()
+        }
+      }
+
+      // Try direct format (some stations send "Artist - Title" directly)
+      if (metadata.includes(' - ')) {
+        const [artist, title] = metadata.split(' - ')
+        return {
+          artist: artist?.trim() || metadata.trim(),
+          title: title?.trim() || 'Unknown Track',
+          timestamp: Date.now()
+        }
+      }
+
+      // If no separator found, use whole string as both artist and title
+      // This gives us the best chance of finding lyrics
+      const cleanMetadata = metadata.trim()
       return {
-        artist: artist?.trim() || 'Unknown Artist',
-        title: title?.trim() || 'Unknown Track',
+        artist: cleanMetadata || 'Unknown Artist',
+        title: cleanMetadata || 'Unknown Track',
         timestamp: Date.now()
       }
+    } catch (error) {
+      console.error('Error parsing ICY metadata:', error, 'Raw metadata:', metadata)
+      return null
     }
-    return null
   }, [])
 
   // Function to update metadata
@@ -506,6 +530,7 @@ export function useRadioStream(): UseRadioStreamReturn {
         return
       }
 
+      console.log('Fetching metadata for station:', station.name)
       const response = await fetch('/api/stream/metadata', {
         method: 'POST',
         headers: {
@@ -514,14 +539,23 @@ export function useRadioStream(): UseRadioStreamReturn {
         body: JSON.stringify({ url: station.directStreamUrl })
       })
 
-      if (!response.ok) return
+      if (!response.ok) {
+        console.error('Metadata fetch failed:', await response.text())
+        return
+      }
 
       const data = await response.json()
+      console.log('Raw metadata response:', data)
+
       if (data.metadata) {
         const metadata = parseICYMetadata(data.metadata)
+        console.log('Parsed metadata:', metadata)
+        
         if (metadata) {
-          // Fetch lyrics when metadata changes
+          // Always attempt to fetch lyrics
           const lyricsResponse = await fetchLyrics(metadata.artist, metadata.title)
+          console.log('Lyrics response:', lyricsResponse)
+          
           setCurrentMetadata({
             ...metadata,
             lyrics: lyricsResponse.success ? lyricsResponse.lyrics : undefined
