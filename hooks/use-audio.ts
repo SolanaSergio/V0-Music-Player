@@ -6,7 +6,7 @@ import { getStreamUrl } from '@/utils/stream-handler'
 import { Track } from '@/types/audio'
 
 export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
-  const { audioContext, masterGain, createAnalyser } = useAudioContext()
+  const { audioContext, masterGain, createAnalyser, equalizerInput, equalizerOutput } = useAudioContext()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
@@ -108,15 +108,18 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
         analyserRef.current = createAnalyser()
       }
 
-      // Connect nodes if we have an analyzer
+      // Connect nodes with equalizer chain
       const source = sourceRef.current
       const analyser = analyserRef.current
-      if (analyser) {
-        source.connect(masterGain)
-        masterGain.connect(analyser)
-        analyser.connect(audioContext.destination)
+
+      if (analyser && equalizerInput && equalizerOutput) {
+        // Source -> EQ Input -> [EQ Filters] -> EQ Output -> Analyzer -> Destination
+        source.connect(equalizerInput)
+        if (analyser) {
+          analyser.connect(audioContext.destination)
+        }
       } else {
-        // Fallback if no analyzer
+        // Fallback if no equalizer or analyzer
         source.connect(masterGain)
         masterGain.connect(audioContext.destination)
       }
@@ -165,7 +168,7 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
       setError(error instanceof Error ? error.message : 'Failed to connect to stream')
       setIsLoading(false)
     }
-  }, [audioContext, masterGain, createAnalyser, volume, currentTrackIndex, allTracks.length, advanceToNextTrack])
+  }, [audioContext, masterGain, createAnalyser, volume, currentTrackIndex, allTracks.length, advanceToNextTrack, equalizerInput, equalizerOutput])
 
   // Clean up on unmount
   useEffect(() => {

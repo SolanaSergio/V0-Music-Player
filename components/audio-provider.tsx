@@ -12,6 +12,9 @@ interface AudioContextValue {
   isInitialized: boolean
   error: Error | null
   retry: () => Promise<void>
+  // Add equalizer chain access
+  equalizerInput: GainNode | null
+  equalizerOutput: GainNode | null
 }
 
 const AudioContext = createContext<AudioContextValue | null>(null)
@@ -35,6 +38,8 @@ export function AudioProvider({
 }) {
   const audioContextRef = useRef<AudioContext | null>(null)
   const masterGainRef = useRef<GainNode | null>(null)
+  const equalizerInputRef = useRef<GainNode | null>(null)
+  const equalizerOutputRef = useRef<GainNode | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const initializationPromiseRef = useRef<Promise<boolean> | null>(null)
@@ -87,8 +92,19 @@ export function AudioProvider({
         // Create master gain node
         const masterGain = ctx.createGain()
         masterGain.gain.setValueAtTime(1.0, ctx.currentTime)
-        masterGain.connect(ctx.destination)
         masterGainRef.current = masterGain
+
+        // Create equalizer input/output nodes
+        const eqInput = ctx.createGain()
+        const eqOutput = ctx.createGain()
+        equalizerInputRef.current = eqInput
+        equalizerOutputRef.current = eqOutput
+
+        // Set up audio chain:
+        // Source -> EQ Input -> [Equalizer Filters] -> EQ Output -> Master Gain -> Destination
+        eqInput.connect(eqOutput)
+        eqOutput.connect(masterGain)
+        masterGain.connect(ctx.destination)
 
         // Handle state changes
         ctx.onstatechange = () => {
@@ -105,6 +121,8 @@ export function AudioProvider({
             setIsInitialized(false)
             audioContextRef.current = null
             masterGainRef.current = null
+            equalizerInputRef.current = null
+            equalizerOutputRef.current = null
           }
         }
 
@@ -175,29 +193,29 @@ export function AudioProvider({
   // Create analyzer with optimized settings
   const createAnalyser = useCallback(() => {
     const ctx = audioContextRef.current
-    if (!ctx) return null
+    if (!ctx || !equalizerOutputRef.current) return null
 
     try {
       const analyser = ctx.createAnalyser() as EnhancedAnalyserNode
-      analyser.fftSize = 2048 // Increased for better frequency resolution
+      analyser.fftSize = 2048
       analyser.smoothingTimeConstant = 0.85
-      analyser.minDecibels = -90 // Increased range for better sensitivity
+      analyser.minDecibels = -90
       analyser.maxDecibels = -10
       
       // Create a gain node specifically for the analyzer to control sensitivity
       const analyzerGain = ctx.createGain()
       analyzerGain.gain.setValueAtTime(1.0, ctx.currentTime)
       
-      // Connect through the analyzer gain node
-      if (masterGainRef.current) {
-        analyzerGain.connect(analyser)
-        analyzerGain.connect(masterGainRef.current)
+      // Connect through the analyzer gain node after the equalizer chain
+      analyzerGain.connect(analyser)
+      if (equalizerOutputRef.current) {
+        equalizerOutputRef.current.connect(analyzerGain)
       }
       
-      // Add sensitivity control method to analyzer
+      // Add sensitivity control method
       analyser.setSensitivity = (value: number) => {
         const normalizedValue = Math.max(0.1, Math.min(2.0, value))
-        const scaledValue = Math.pow(normalizedValue, 2) // Exponential scaling for more natural control
+        const scaledValue = Math.pow(normalizedValue, 2)
         analyzerGain.gain.setTargetAtTime(scaledValue, ctx.currentTime, 0.1)
       }
       
@@ -229,6 +247,8 @@ export function AudioProvider({
         ctx.close().catch(console.error)
         audioContextRef.current = null
         masterGainRef.current = null
+        equalizerInputRef.current = null
+        equalizerOutputRef.current = null
         setIsInitialized(false)
         setError(null)
       }, 20)
@@ -262,20 +282,20 @@ export function AudioProvider({
     await initContext()
   }, [cleanup, initContext])
 
-  const value = {
-    audioContext: audioContextRef.current,
-    masterGain: masterGainRef.current,
-    createAnalyser,
-    resumeContext,
-    setVolume,
-    cleanup,
-    isInitialized,
-    error,
-    retry
-  }
-
   return (
-    <AudioContext.Provider value={value}>
+    <AudioContext.Provider value={{
+      audioContext: audioContextRef.current,
+      masterGain: masterGainRef.current,
+      createAnalyser,
+      resumeContext,
+      setVolume,
+      cleanup,
+      isInitialized,
+      error,
+      retry,
+      equalizerInput: equalizerInputRef.current,
+      equalizerOutput: equalizerOutputRef.current
+    }}>
       {children}
     </AudioContext.Provider>
   )
