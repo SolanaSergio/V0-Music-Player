@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { Play, Pause } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ImageLoader } from '@/components/image-loader'
-import { MusicWave } from '@/components/music-wave'
+import { ImageLoader } from '@/components/shared/image-loader'
+import { MusicWave } from '@/components/shared/music-wave'
 import { cn } from '@/lib/utils'
 import type { Track } from '@/types/audio'
 
@@ -13,8 +13,7 @@ interface FeaturedProps {
 }
 
 export function Featured({ tracks }: FeaturedProps) {
-  const [highlightedTrack, setHighlightedTrack] = useState<number | null>(null)
-  const [hoveredTrack, setHoveredTrack] = useState<number | null>(null)
+  const [activeTrack, setActiveTrack] = useState<Track | null>(null)
 
   return (
     <section className="space-y-6 w-full">
@@ -22,29 +21,24 @@ export function Featured({ tracks }: FeaturedProps) {
         <h2 className="text-2xl font-bold">Featured Stations</h2>
         <Button variant="link">See all</Button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tracks.map((track, index) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tracks.map((track) => (
           <div
             key={track.id}
             className={cn(
-              "group relative aspect-[4/3] overflow-hidden rounded-lg",
-              "transition-transform duration-300 hover:scale-[1.02]",
-              "before:absolute before:inset-0 before:bg-gradient-to-t before:from-black/60 before:to-transparent before:z-10",
-              highlightedTrack === index && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+              "group relative overflow-hidden rounded-lg bg-card hover:bg-card/80 transition-colors",
+              "border border-border/50 hover:border-border/80",
+              "cursor-pointer"
             )}
-            onMouseEnter={() => setHoveredTrack(index)}
-            onMouseLeave={() => setHoveredTrack(null)}
+            onClick={() => setActiveTrack(activeTrack?.id === track.id ? null : track)}
           >
-            <ImageLoader
-              src={track.imageUrl}
-              fallback={track.fallbackImage}
-              alt={track.title}
-              fill
-              className={cn(
-                "object-cover transition-transform duration-700",
-                (hoveredTrack === index || highlightedTrack === index) && "scale-110"
-              )}
-            />
+            <div className="aspect-square">
+              <ImageLoader
+                src={track.image}
+                alt={track.title}
+                className="object-cover"
+              />
+            </div>
             <div className="absolute inset-0 z-20 p-4">
               <div className="h-full flex flex-col justify-end">
                 {/* Genre-specific gradient overlay */}
@@ -81,7 +75,7 @@ export function Featured({ tracks }: FeaturedProps) {
             </div>
             <div className="absolute top-4 right-4">
               <MusicWave 
-                playing={highlightedTrack === index} 
+                playing={activeTrack?.id === track.id} 
                 className="opacity-0 group-hover:opacity-100 transition-opacity" 
               />
             </div>
@@ -92,18 +86,19 @@ export function Featured({ tracks }: FeaturedProps) {
                 "opacity-0 group-hover:opacity-100 transition-opacity",
                 "hover:scale-110 hover:bg-primary hover:text-primary-foreground"
               )}
-              onClick={() => {
-                setHighlightedTrack(highlightedTrack === index ? null : index)
+              onClick={(e) => {
+                e.stopPropagation()
+                setActiveTrack(activeTrack?.id === track.id ? null : track)
                 window.location.href = `/player?track=${track.id}`
               }}
             >
-              {highlightedTrack === index ? (
+              {activeTrack?.id === track.id ? (
                 <Pause className="h-4 w-4" />
               ) : (
                 <Play className="h-4 w-4" />
               )}
               <span className="sr-only">
-                {highlightedTrack === index ? 'Pause' : 'Play'} {track.title}
+                {activeTrack?.id === track.id ? 'Pause' : 'Play'} {track.title}
               </span>
             </Button>
           </div>

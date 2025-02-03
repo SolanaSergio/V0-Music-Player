@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { useEqualizer, DEFAULT_PRESETS } from '@/hooks/use-equalizer'
-import { EqualizerSheet } from './mobile/equalizer-sheet'
+import { EqualizerSheet } from '@/components/mobile/equalizer-sheet'
 
 interface VolumeEqualizerProps {
   className?: string

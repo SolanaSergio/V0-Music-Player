@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ImageLoader } from '@/components/image-loader'
+import { ImageLoader } from '@/components/shared/image-loader'
 import type { Track } from '@/types/audio'
 import { cn } from "@/lib/utils"
 
@@ -53,8 +53,8 @@ export function QueueManager({
       <SheetTrigger asChild>
         {children || (
           <Button variant="ghost" size="icon" className={className}>
-            <List className="h-4 w-4" />
-            <span className="sr-only">Queue</span>
+            <List className="h-5 w-5" />
+            <span className="sr-only">Open queue</span>
           </Button>
         )}
       </SheetTrigger>
@@ -62,83 +62,76 @@ export function QueueManager({
         <SheetHeader>
           <SheetTitle>Queue</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 space-y-4">
+        <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
           {currentTrack && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-muted-foreground">
-                Now Playing
-              </div>
-              <div className="flex items-center gap-3 rounded-md bg-muted/50 p-2">
+            <div className="mb-6 space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">Now Playing</h3>
+              <div className="flex items-center gap-3">
                 <div className="relative h-12 w-12 overflow-hidden rounded-md">
                   <ImageLoader
-                    src={currentTrack.imageUrl}
-                    fallback={currentTrack.fallbackImage}
+                    src={currentTrack.image}
                     alt={currentTrack.title}
-                    width={48}
-                    height={48}
                     className="object-cover"
                   />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium truncate">{currentTrack.title}</div>
-                  <div className="text-sm text-muted-foreground truncate">
-                    {currentTrack.artist}
-                  </div>
+                <div className="flex-1 space-y-1 min-w-0">
+                  <p className="text-sm font-medium leading-none truncate">{currentTrack.title}</p>
+                  <p className="text-sm text-muted-foreground truncate">{currentTrack.artist}</p>
                 </div>
               </div>
             </div>
           )}
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-muted-foreground">
-              Next Up • {queue.length} tracks
-            </div>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-2">
+          {queue.length > 0 ? (
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">Next Up</h3>
+              <div className="space-y-3">
                 {queue.map((track, index) => (
                   <div
                     key={`${track.id}-${index}`}
+                    className="flex items-center gap-3 group"
                     draggable
                     onDragStart={() => handleDragStart(index)}
                     onDragOver={(e) => handleDragOver(e, index)}
                     onDragEnd={() => setDraggedIndex(null)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-md p-2 select-none",
-                      "hover:bg-muted/50 transition-colors",
-                      draggedIndex === index && "opacity-50"
-                    )}
                   >
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                    <div className="relative h-10 w-10 overflow-hidden rounded-md">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <GripVertical className="h-4 w-4" />
+                      <span className="sr-only">Drag to reorder</span>
+                    </Button>
+                    <div className="relative h-12 w-12 overflow-hidden rounded-md shrink-0">
                       <ImageLoader
-                        src={track.imageUrl}
-                        fallback={track.fallbackImage}
+                        src={track.image}
                         alt={track.title}
-                        width={40}
-                        height={40}
                         className="object-cover"
                       />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium truncate">{track.title}</div>
-                      <div className="text-sm text-muted-foreground truncate">
-                        {track.artist}
-                      </div>
+                    <div className="flex-1 space-y-1 min-w-0">
+                      <p className="text-sm font-medium leading-none truncate">{track.title}</p>
+                      <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => onRemoveTrack(index)}
                     >
                       <X className="h-4 w-4" />
-                      <span className="sr-only">Remove</span>
+                      <span className="sr-only">Remove from queue</span>
                     </Button>
                   </div>
                 ))}
               </div>
-            </ScrollArea>
-          </div>
-        </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-sm text-muted-foreground">Queue is empty</p>
+            </div>
+          )}
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   )
