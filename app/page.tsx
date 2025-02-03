@@ -1,13 +1,37 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { MobileLayout } from '@/components/mobile/mobile-layout'
+import { MobileHome } from '@/components/mobile/mobile-home'
 import { Suspense } from 'react'
-import { RadioStations } from '@/components/radio-stations'
-import { HeroBanner } from '@/components/hero-banner'
-import { WelcomeMessage } from '@/components/welcome-message'
-import { GenreExplorer } from '@/components/genre-explorer'
+import { RadioStations } from '@/components/desktop/radio-stations'
+import { HeroBanner } from '@/components/desktop/hero-banner'
+import { WelcomeMessage } from '@/components/desktop/welcome-message'
+import { GenreExplorer } from '@/components/desktop/genre-explorer'
 import { Loading } from '@/components/ui/loading'
-import { ErrorBoundary } from '@/components/error-boundary'
+import { ErrorBoundary } from '@/components/shared/error-boundary'
 import { genres } from '@/data/audio'
 
 export default function Home() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  if (isMobile) {
+    return (
+      <MobileLayout>
+        <MobileHome />
+      </MobileLayout>
+    )
+  }
+
   return (
     <div className="pb-8">
       {/* Hero Section */}

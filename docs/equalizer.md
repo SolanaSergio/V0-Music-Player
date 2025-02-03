@@ -79,41 +79,26 @@ Source → EQ Input → [Filter Chain] → EQ Output → Master Gain → Destina
 - Proper cleanup of audio nodes
 - Memory leak prevention
 
-## Usage
-
-### Component Integration
-```typescript
-import { VolumeEqualizer } from '@/components/volume-equalizer'
-
-function Player() {
-  return (
-    <div>
-      <VolumeEqualizer />
-    </div>
-  )
-}
-```
-
-### Hook Usage
-```typescript
-import { useEqualizer } from '@/hooks/use-equalizer'
-
-function CustomEqualizer() {
-  const {
-    bands,
-    activePreset,
-    isEnabled,
-    updateBand,
-    applyPreset,
-    reset,
-    toggleEqualizer
-  } = useEqualizer()
-  
-  // Custom implementation
-}
-```
-
 ## User Interface
+
+### Responsive Design
+The equalizer features a fully responsive design that adapts to both desktop and mobile interfaces:
+
+#### Desktop Interface
+- Popover-based interface
+- Compact layout optimized for mouse interaction
+- Grid layout for preset buttons
+- Standard-sized controls
+
+#### Mobile Interface
+- Bottom drawer interface for better touch interaction
+- Full-width layout for easier access
+- Larger touch targets:
+  - Taller sliders (40px increase)
+  - Larger preset buttons
+  - Increased text size for frequency labels
+- Optimized spacing and padding
+- Single-column preset layout
 
 ### Controls
 - On/Off toggle switch
@@ -127,17 +112,30 @@ function CustomEqualizer() {
 - Active preset highlighting
 - Smooth slider transitions
 - Enable/disable animations
+- Mobile-specific touch feedback
+- Responsive layout transitions
+
+### Accessibility Features
+- Screen reader support
+- Touch-friendly targets on mobile
+- Clear visual hierarchy
+- Keyboard navigation support
+- High contrast state indicators
 
 ## Browser Support
 - Chrome/Edge (full support)
 - Firefox (full support)
 - Safari (requires webkit prefix)
 - Mobile browsers (full support)
+- Responsive design breakpoints:
+  - Mobile: < 768px
+  - Desktop: ≥ 768px
 
 ## Known Limitations
 - CPU usage increases with filter count
 - Some browsers may limit audio processing in background tabs
 - Mobile devices may have performance impact
+- Touch events may have slight latency on some devices
 
 ## Future Improvements
 - [ ] Additional presets
@@ -145,4 +143,8 @@ function CustomEqualizer() {
 - [ ] Variable Q control
 - [ ] Frequency response visualization
 - [ ] A/B comparison feature
-- [ ] Import/export preset functionality 
+- [ ] Import/export preset functionality
+- [ ] Gesture controls for mobile
+- [ ] Haptic feedback on mobile devices
+- [ ] Landscape mode optimization
+- [ ] Tablet-specific layout 

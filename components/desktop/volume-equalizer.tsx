@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Sliders } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
@@ -11,12 +12,13 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { useEqualizer, DEFAULT_PRESETS } from '@/hooks/use-equalizer'
+import { EqualizerSheet } from './mobile/equalizer-sheet'
 
 interface VolumeEqualizerProps {
   className?: string
 }
 
-export function VolumeEqualizer({ className }: VolumeEqualizerProps) {
+function DesktopEqualizer({ className }: VolumeEqualizerProps) {
   const { bands, activePreset, isEnabled, updateBand, applyPreset, toggleEqualizer } = useEqualizer()
 
   return (
@@ -98,5 +100,24 @@ export function VolumeEqualizer({ className }: VolumeEqualizerProps) {
       </PopoverContent>
     </Popover>
   )
+}
+
+export function VolumeEqualizer({ className }: VolumeEqualizerProps) {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  if (isMobile) {
+    return <EqualizerSheet className={className} />
+  }
+
+  return <DesktopEqualizer className={className} />
 }
 

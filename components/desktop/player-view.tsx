@@ -13,13 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { AudioVisualizer } from '@/components/audio-visualizer'
-import { VolumeEqualizer } from '@/components/volume-equalizer'
-import { QueueManager } from '@/components/queue-manager'
-import { ShareModal } from '@/components/share-modal'
-import { LyricsDisplay } from '@/components/lyrics-display'
-import { VolumeSlider } from '@/components/volume-slider'
-import { useAudioContext } from '@/components/audio-provider'
+import { AudioVisualizer } from '@/components/shared/audio-visualizer'
+import { VolumeEqualizer } from '@/components/desktop/volume-equalizer'
+import { QueueManager } from '@/components/desktop/queue-manager'
+import { ShareModal } from '@/components/desktop/share-modal'
+import { LyricsDisplay } from '@/components/desktop/lyrics-display'
+import { VolumeSlider } from '@/components/desktop/volume-slider'
+import { useAudioContext } from '@/components/shared/audio-provider'
 import { cn } from "@/lib/utils"
 import { featuredTracks } from '@/data/audio'
 import { radioStations } from '@/data/audio'
@@ -483,17 +483,20 @@ export function PlayerView() {
               </Button>
               <VolumeEqualizer className="h-10 w-10 rounded-full transition-all duration-300" />
               <div className="group flex items-center gap-2">
-                <VolumeSlider value={volume * 100} onChange={(value) => setVolume(value / 100)} />
+                <VolumeSlider 
+                  value={volume * 100} 
+                  onChange={(value: number) => setVolume(value / 100)} 
+                />
               </div>
               <QueueManager
                 currentTrack={currentTrack}
                 queue={queue}
-                onRemoveTrack={(index) => {
+                onRemoveTrack={(index: number) => {
                   const newQueue = [...queue]
                   newQueue.splice(index, 1)
                   setQueue(newQueue)
                 }}
-                onReorderTrack={(from, to) => {
+                onReorderTrack={(from: number, to: number) => {
                   const newQueue = [...queue]
                   const [removed] = newQueue.splice(from, 1)
                   newQueue.splice(to, 0, removed)

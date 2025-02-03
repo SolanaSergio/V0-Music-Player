@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAudioContext } from '@/components/audio-provider'
+import { useAudioContext } from '@/components/shared/audio-provider'
 import { getStreamUrl } from '@/utils/stream-handler'
 import { Track } from '@/types/audio'
 

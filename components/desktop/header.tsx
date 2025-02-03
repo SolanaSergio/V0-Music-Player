@@ -20,7 +20,7 @@ export function Header() {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-background/40 backdrop-blur supports-[backdrop-filter]:bg-background/20 z-50 border-b border-border/20">
+    <header className="hidden md:block fixed top-0 left-0 right-0 h-16 bg-background/40 backdrop-blur supports-[backdrop-filter]:bg-background/20 z-50 border-b border-border/20">
       <div className="flex h-full items-center px-6 gap-4 md:gap-6">
         <div className="flex-1 flex justify-center max-w-2xl">
           <div className={cn(
@@ -95,7 +95,7 @@ export function Header() {
             ease: "easeInOut",
             times: [0, 0.1, 0.3, 0.5, 0.8, 1],
           }}
-          className="text-sm font-medium ml-auto mr-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80 hover:scale-105 transition-transform"
+          className="text-xs font-medium ml-2 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80 hover:scale-105 transition-transform"
           style={{
             textShadow: "0 0 8px rgba(var(--primary), 0.3)"
           }}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useAudioContext } from '@/components/audio-provider'
+import { useAudioContext } from '@/components/shared/audio-provider'
 import { throttle } from 'lodash'
 import { StreamErrorType, RadioStation } from '@/types/audio'
 import type { StreamError, TrackMetadata } from '@/types/audio'

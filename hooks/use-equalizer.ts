@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAudioContext } from '@/components/audio-provider'
+import { useAudioContext } from '@/components/shared/audio-provider'
 
 export interface EqualizerBand {
   frequency: number

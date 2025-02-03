@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { ImageLoader } from '@/components/image-loader'
+import { ImageLoader } from '@/components/shared/image-loader'
 import { Loading } from '@/components/ui/loading'
 import { genres, radioStations } from '@/data/audio'
 import type { RadioStation } from '@/types/audio'

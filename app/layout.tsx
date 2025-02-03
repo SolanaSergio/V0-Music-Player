@@ -2,14 +2,14 @@ import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import './globals.css'
-import { Sidebar } from '@/components/sidebar'
-import { Header } from '@/components/header'
+import { Sidebar, SidebarProvider } from '@/components/ui/sidebar'
+import { Header } from '@/components/desktop/header'
 import { MobileNav } from '@/components/mobile-nav'
 import { ClientLayout } from '@/components/client-layout'
-import { ErrorBoundary } from '@/components/error-boundary'
-import { ErrorLogger } from '@/components/error-logger'
+import { ErrorBoundary } from '@/components/shared/error-boundary'
+import { ErrorLogger } from '@/components/shared/error-logger'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { AudioProvider } from '@/components/audio-provider'
+import { AudioProvider } from '@/components/shared/audio-provider'
 
 export const metadata: Metadata = {
   title: 'Music Streaming App',
@@ -40,39 +40,41 @@ export default function RootLayout({
         <ErrorLogger />
         <ErrorBoundary>
           <ClientLayout>
-            <AudioProvider>
-              <Suspense fallback={<RootLoading />}>
-                <div className="relative flex h-screen overflow-hidden">
-                  {/* Sidebar - Hidden on mobile */}
-                  <Suspense fallback={
-                    <div className="hidden md:block w-[250px] bg-muted/20 animate-pulse" />
-                  }>
-                    <Sidebar className="hidden md:block" />
-                  </Suspense>
-
-                  {/* Mobile Navigation */}
-                  <Suspense fallback={null}>
-                    <MobileNav className="md:hidden" />
-                  </Suspense>
-
-                  {/* Main Content */}
-                  <main className="flex-1 flex flex-col overflow-hidden bg-background/[0.02] backdrop-blur-[2px]">
+            <SidebarProvider>
+              <AudioProvider>
+                <Suspense fallback={<RootLoading />}>
+                  <div className="relative flex h-screen overflow-hidden">
+                    {/* Sidebar - Hidden on mobile */}
                     <Suspense fallback={
-                      <div className="h-16 bg-muted/20 animate-pulse" />
+                      <div className="hidden md:block w-[250px] bg-muted/20 animate-pulse" />
                     }>
-                      <Header />
+                      <Sidebar className="hidden md:block" />
                     </Suspense>
 
-                    {/* Scrollable Content Area */}
-                    <div className="h-[calc(100vh-4rem)] overflow-y-auto pt-16 scrollbar-thin scrollbar-track-background/20 scrollbar-thumb-muted-foreground/10 hover:scrollbar-thumb-muted-foreground/20">
-                      <ErrorBoundary>
-                        {children}
-                      </ErrorBoundary>
-                    </div>
-                  </main>
-                </div>
-              </Suspense>
-            </AudioProvider>
+                    {/* Mobile Navigation */}
+                    <Suspense fallback={null}>
+                      <MobileNav className="md:hidden" />
+                    </Suspense>
+
+                    {/* Main Content */}
+                    <main className="flex-1 flex flex-col overflow-hidden bg-background/[0.02] backdrop-blur-[2px]">
+                      <Suspense fallback={
+                        <div className="h-16 bg-muted/20 animate-pulse" />
+                      }>
+                        <Header />
+                      </Suspense>
+
+                      {/* Scrollable Content Area */}
+                      <div className="h-[calc(100vh-4rem)] overflow-y-auto pt-16 scrollbar-thin scrollbar-track-background/20 scrollbar-thumb-muted-foreground/10 hover:scrollbar-thumb-muted-foreground/20">
+                        <ErrorBoundary>
+                          {children}
+                        </ErrorBoundary>
+                      </div>
+                    </main>
+                  </div>
+                </Suspense>
+              </AudioProvider>
+            </SidebarProvider>
           </ClientLayout>
         </ErrorBoundary>
       </body>

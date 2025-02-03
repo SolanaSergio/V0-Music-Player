@@ -3,8 +3,8 @@
 import { motion } from 'framer-motion'
 import { Compass } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
-import { ImageLoader } from '@/components/image-loader'
-import { GenreIcon } from '@/components/genre-icon'
+import { ImageLoader } from '@/components/shared/image-loader'
+import { GenreIcon } from '@/components/shared/genre-icon'
 import type { Genre } from '@/types/audio'
 
 interface GenreExplorerProps {

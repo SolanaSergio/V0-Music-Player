@@ -1,7 +1,7 @@
 'use client'
 
-import { AudioProvider } from '@/components/audio-provider'
-import { ThemeProvider } from '@/components/theme-provider'
+import { AudioProvider } from '@/components/shared/audio-provider'
+import { ThemeProvider } from '@/components/shared/theme-provider'
 import { BackgroundEffects } from '@/components/background-effects'
 
 interface ClientLayoutProps {
