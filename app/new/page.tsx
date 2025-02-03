@@ -1,4 +1,4 @@
-import { Featured } from '@/components/featured'
+import { Featured } from '@/components/desktop/featured'
 import { featuredTracks } from '@/data/audio'
 
 export default function NewPage() {

@@ -1,6 +1,6 @@
 'use client'
 
-import { PlayerView } from '@/components/player-view'
+import { PlayerView } from '@/components/desktop/player-view'
 
 export default function PlayerPage() {
   return (

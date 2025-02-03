@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { RadioStations } from '@/components/radio-stations'
+import { RadioStations } from '@/components/desktop/radio-stations'
 
 export const metadata: Metadata = {
   title: 'Radio Stations | Music App',
