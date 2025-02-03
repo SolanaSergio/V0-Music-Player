@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
@@ -10,6 +10,7 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 
 interface RadioStationProps {
+  id: string
   title: string
   genre: string
   listeners: string
@@ -19,9 +20,19 @@ interface RadioStationProps {
   onPlay?: () => void
 }
 
-function RadioStationCard({ title, genre, listeners, imageUrl, isLive, isPlaying, onPlay }: RadioStationProps) {
+function RadioStationCard({ 
+  id, 
+  title, 
+  genre, 
+  listeners, 
+  imageUrl, 
+  isLive, 
+  isPlaying, 
+  onPlay 
+}: RadioStationProps) {
   return (
     <motion.div
+      key={id}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="group touch-none"
@@ -54,6 +65,7 @@ function RadioStationCard({ title, genre, listeners, imageUrl, isLive, isPlaying
           size="icon" 
           className="h-8 w-8 sm:h-10 sm:w-10 shrink-0"
           onClick={onPlay}
+          aria-label={isPlaying ? `Pause ${title}` : `Play ${title}`}
         >
           {isPlaying ? (
             <PauseIcon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -67,6 +79,7 @@ function RadioStationCard({ title, genre, listeners, imageUrl, isLive, isPlaying
 }
 
 interface CategoryCardProps {
+  id: string
   title: string
   icon: React.ElementType
   stationCount: number
@@ -74,9 +87,17 @@ interface CategoryCardProps {
   onClick?: () => void
 }
 
-function CategoryCard({ title, icon: Icon, stationCount, imageUrl, onClick }: CategoryCardProps) {
+function CategoryCard({ 
+  id, 
+  title, 
+  icon: Icon, 
+  stationCount, 
+  imageUrl, 
+  onClick 
+}: CategoryCardProps) {
   return (
     <motion.div
+      key={id}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       whileTap={{ scale: 0.98 }}
@@ -129,7 +150,7 @@ function LoadingCategoryCard() {
 }
 
 function GreetingCard() {
-  const [greeting, setGreeting] = useState('')
+  const [greeting, setGreeting] = useState('Good Morning')
   const [icon, setIcon] = useState<React.ElementType>(Sun)
   const [bgImage, setBgImage] = useState('')
 
@@ -151,30 +172,25 @@ function GreetingCard() {
   }, [])
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative h-28 sm:h-36 rounded-lg overflow-hidden w-full"
-    >
+    <div className="relative rounded-lg overflow-hidden w-full aspect-[3/1] max-w-full">
       <ImageLoader
         src={bgImage}
         alt={greeting}
         fill
-        className="object-cover"
+        className="object-cover brightness-[0.8]"
         fallback="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
-      <div className="absolute inset-0 p-4 flex flex-col justify-between">
-        <div className="flex items-center gap-1.5 sm:gap-2 text-white">
-          {React.createElement(icon, { className: "h-3.5 w-3.5 sm:h-4 sm:w-4" })}
-          <span className="text-xs sm:text-sm font-medium">Now Playing</span>
+      <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-4">
+        <div className="flex items-center gap-1.5 text-white">
+          {React.createElement(icon, { className: "h-3.5 w-3.5" })}
+          <span className="text-xs font-medium">Now Playing</span>
         </div>
         <div>
-          <h1 className="text-base sm:text-xl font-semibold text-white mb-1 sm:mb-2">{greeting}</h1>
-          <p className="text-xs sm:text-sm text-white/80 line-clamp-1">Discover stations perfect for your mood</p>
+          <h1 className="text-base font-semibold text-white mb-0.5">{greeting}</h1>
+          <p className="text-xs text-white/90 line-clamp-1">Discover stations perfect for your mood</p>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
@@ -182,15 +198,15 @@ export function MobileHome() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentStationId, setCurrentStationId] = useState<string | null>(null)
 
-  // Featured radio stations with updated high-quality images
-  const featuredStations = [
+  // Memoize static data to prevent unnecessary re-renders
+  const featuredStations = useMemo(() => [
     { 
       id: '1', 
       title: "Classical Radio Berlin", 
       genre: "Classical",
       listeners: "1.2k",
       isLive: true,
-      imageUrl: "https://images.unsplash.com/photo-1507838153414-b4b713384a76" // Symphony orchestra
+      imageUrl: "https://images.unsplash.com/photo-1507838153414-b4b713384a76"
     },
     { 
       id: '2', 
@@ -198,7 +214,7 @@ export function MobileHome() {
       genre: "Jazz",
       listeners: "3.4k",
       isLive: true,
-      imageUrl: "https://images.unsplash.com/photo-1511192336575-5a79af67a629" // Jazz performer
+      imageUrl: "https://images.unsplash.com/photo-1511192336575-5a79af67a629"
     },
     { 
       id: '3', 
@@ -206,19 +222,11 @@ export function MobileHome() {
       genre: "Electronic",
       listeners: "5.1k",
       isLive: true,
-      imageUrl: "https://images.unsplash.com/photo-1598387993441-a364f854c3e1" // Electronic music setup
+      imageUrl: "https://images.unsplash.com/photo-1598387993441-a364f854c3e1"
     }
-  ]
+  ], [])
 
-  // Popular radio stations
-  const popularStations: Array<{
-    id: string
-    title: string
-    genre: string
-    listeners: string
-    isLive: boolean
-    imageUrl: string
-  }> = [
+  const popularStations = useMemo(() => [
     { 
       id: '4', 
       title: "Deep House Radio", 
@@ -243,9 +251,9 @@ export function MobileHome() {
       isLive: true,
       imageUrl: "https://images.unsplash.com/photo-1495020689067-958852a7765e"
     }
-  ]
+  ], [])
 
-  const categories = [
+  const categories = useMemo(() => [
     { 
       id: '1', 
       title: "Classical",
@@ -281,7 +289,7 @@ export function MobileHome() {
       stationCount: 74,
       imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa"
     }
-  ]
+  ], [])
 
   // Simulate loading
   useEffect(() => {
@@ -289,11 +297,16 @@ export function MobileHome() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Handle station play/pause
+  const handleStationPlay = (stationId: string) => {
+    setCurrentStationId(prevId => prevId === stationId ? null : stationId)
+  }
+
   return (
-    <div className="w-full pb-20">
-      {/* Greeting Card with container padding */}
-      <div className="w-full px-4">
-        <div className="w-full">
+    <div className="w-full max-w-md mx-auto pb-20">
+      {/* Greeting Card Container */}
+      <div className="px-4">
+        <div className="w-full max-w-full">
           <GreetingCard />
         </div>
       </div>
@@ -311,7 +324,7 @@ export function MobileHome() {
                   key={station.id}
                   {...station}
                   isPlaying={currentStationId === station.id}
-                  onPlay={() => setCurrentStationId(currentStationId === station.id ? null : station.id)}
+                  onPlay={() => handleStationPlay(station.id)}
                 />
               ))
             )}
@@ -354,7 +367,7 @@ export function MobileHome() {
                 key={station.id}
                 {...station}
                 isPlaying={currentStationId === station.id}
-                onPlay={() => setCurrentStationId(currentStationId === station.id ? null : station.id)}
+                onPlay={() => handleStationPlay(station.id)}
               />
             ))
           )}
@@ -362,4 +375,4 @@ export function MobileHome() {
       </section>
     </div>
   )
-} 
+}
