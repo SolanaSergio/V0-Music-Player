@@ -22,18 +22,26 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={GeistSans.className} suppressHydrationWarning>
+      <body className={`${GeistSans.className} bg-background antialiased`} suppressHydrationWarning>
         <ErrorBoundary>
           <ClientLayout>
-            <div className="flex min-h-[100dvh] max-h-[100dvh] overflow-hidden">
+            <div className="flex h-screen">
               <SidebarProvider>
-                <Sidebar className="hidden md:block" />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <Header className="hidden md:block" />
-                  <main className="flex-1 overflow-hidden relative">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      {children}
-                    </Suspense>
+                {/* Sidebar - Fixed position with premium blur effect */}
+                <Sidebar className="hidden md:block w-[280px] border-r border-border/10 bg-background/80 backdrop-blur-xl shadow-xl z-30" />
+                
+                {/* Main Content Area */}
+                <div className="flex-1 flex flex-col min-h-screen relative">
+                  {/* Header - Fixed with premium glass effect */}
+                  <Header className="hidden md:block sticky top-0 h-16 border-b border-border/10 bg-background/80 backdrop-blur-xl shadow-sm z-20" />
+                  
+                  {/* Main Content - Scrollable */}
+                  <main className="flex-1 overflow-y-auto">
+                    <div className="relative">
+                      <Suspense fallback={<LoadingSpinner />}>
+                        {children}
+                      </Suspense>
+                    </div>
                   </main>
                 </div>
               </SidebarProvider>

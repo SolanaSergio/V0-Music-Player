@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, Share2, ListMusic, Mic2, Maximize2, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Minimize2, ChevronDown, VolumeX, Volume2 } from 'lucide-react'
@@ -34,24 +34,23 @@ export function PlayerView() {
   const stationId = searchParams.get('station')
   const { setMasterVolume } = useAudioContext()
 
-  // Find the requested track/station or default to the first track
-  const initialTrack = stationId 
+  // Find the requested track/station
+  const station = stationId ? radioStations.find((s: RadioStation) => s.id === stationId) : null
+  const track = trackId ? featuredTracks.find((t: Track) => t.id === trackId) : null
+  
+  const initialTrack: Track = station 
     ? {
-        id: stationId,
-        title: radioStations.find((s: RadioStation) => s.id === stationId)?.name || 'Unknown Station',
+        id: station.id,
+        title: station.name,
         artist: 'Live Radio',
-        album: radioStations.find((s: RadioStation) => s.id === stationId)?.description || '',
+        album: station.description || '',
         duration: 0,
-        genre: 'electronic' as GenreIconType,
-        image: radioStations.find((s: RadioStation) => s.id === stationId)?.image || '',
-        audioUrl: `/api/stream/${stationId}`,
+        artwork: station.image,
+        streamUrl: `/api/stream/${station.id}`,
         isLive: true
       }
-    : trackId 
-      ? featuredTracks.find(track => track.id === trackId) 
-      : featuredTracks[0]
+    : track || featuredTracks[0]
 
-  const station = stationId ? radioStations.find((s: RadioStation) => s.id === stationId) : null
   const { 
     isConnected, 
     isBuffering, 
@@ -64,7 +63,7 @@ export function PlayerView() {
     isRecognizing 
   } = useRadioStream()
 
-  const [currentTrack, setCurrentTrack] = useState<Track>(initialTrack || featuredTracks[0])
+  const [currentTrack, setCurrentTrack] = useState<Track>(initialTrack)
   const [isPlaying, setIsPlaying] = useState(false)
   const [showLyrics, setShowLyrics] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
@@ -89,6 +88,7 @@ export function PlayerView() {
     }
   }, [volume, isMuted, setMasterVolume, setStreamVolume])
 
+  // Handle fullscreen keyboard shortcuts
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === 'f') {
@@ -103,67 +103,95 @@ export function PlayerView() {
 
   // Update current track when URL parameter changes
   useEffect(() => {
-    if (trackId) {
-      const track = featuredTracks.find((t: Track) => t.id === trackId)
-      if (track) {
-        setCurrentTrack(track)
-        setIsPlaying(true) // Auto-play when track changes
+    if (station) {
+      const newTrack: Track = {
+        id: station.id,
+        title: station.name,
+        artist: 'Live Radio',
+        album: station.description || '',
+        duration: 0,
+        artwork: station.image,
+        streamUrl: `/api/stream/${station.id}`,
+        isLive: true
       }
+      setCurrentTrack(newTrack)
+    } else if (track) {
+      setCurrentTrack(track)
     }
-  }, [trackId])
+  }, [station, track])
 
-  // Update URL when track changes
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams)
-    if (currentTrack.id !== params.get('track')) {
-      params.set('track', currentTrack.id)
-      router.replace(`/player?${params.toString()}`)
-    }
-  }, [currentTrack, router, searchParams])
+  // Handle station switching
+  const handleStationChange = useCallback(async (newStation: RadioStation) => {
+    if (!newStation) return
 
-  // Add functions to handle station switching
-  const getNextStation = (currentStationId: string | null) => {
-    if (!currentStationId) return radioStations[0]
-    const currentIndex = radioStations.findIndex(s => s.id === currentStationId)
-    return radioStations[(currentIndex + 1) % radioStations.length]
-  }
-
-  const getPreviousStation = (currentStationId: string | null) => {
-    if (!currentStationId) return radioStations[radioStations.length - 1]
-    const currentIndex = radioStations.findIndex(s => s.id === currentStationId)
-    return radioStations[(currentIndex - 1 + radioStations.length) % radioStations.length]
-  }
-
-  const handleStationChange = async (newStation: RadioStation) => {
-    if (isConnected) {
-      disconnect()
-    }
-    
-    const newTrack = {
-      id: newStation.id,
-      title: newStation.name,
-      artist: 'Live Radio',
-      album: newStation.description,
-      duration: 0,
-      genre: newStation.genre as GenreIconType,
-      image: newStation.image,
-      audioUrl: `/api/stream/${newStation.id}`,
-      isLive: true
-    }
-    
-    setCurrentTrack(newTrack)
-    const params = new URLSearchParams(searchParams)
-    params.delete('track')
-    params.set('station', newStation.id)
-    router.replace(`/player?${params.toString()}`)
-    
     try {
+      // Disconnect from current stream if connected
+      if (isConnected) {
+        disconnect()
+      }
+
+      // Update URL
+      const params = new URLSearchParams(searchParams)
+      params.set('station', newStation.id)
+      router.replace(`/player?${params.toString()}`)
+
+      // Connect to new stream
       await connectToStream(`/api/stream/${newStation.id}`)
       setIsPlaying(true)
-    } catch (err) {
-      console.error('Failed to connect to new station:', err)
+    } catch (error) {
+      console.error('Failed to change station:', error)
     }
-  }
+  }, [isConnected, disconnect, searchParams, router, connectToStream])
+
+  // Get next/previous stations
+  const getNextStation = useCallback((currentStationId: string) => {
+    const currentIndex = radioStations.findIndex(s => s.id === currentStationId)
+    return radioStations[(currentIndex + 1) % radioStations.length]
+  }, [])
+
+  const getPreviousStation = useCallback((currentStationId: string) => {
+    const currentIndex = radioStations.findIndex(s => s.id === currentStationId)
+    return radioStations[(currentIndex - 1 + radioStations.length) % radioStations.length]
+  }, [])
+
+  // Handle track switching
+  const handleTrackChange = useCallback((newTrack: Track) => {
+    setCurrentTrack(newTrack)
+    const params = new URLSearchParams(searchParams)
+    params.set('track', newTrack.id)
+    router.replace(`/player?${params.toString()}`)
+    setIsPlaying(true)
+  }, [searchParams, router])
+
+  // Get next/previous tracks
+  const getNextTrack = useCallback(() => {
+    const currentIndex = featuredTracks.findIndex(t => t.id === currentTrack.id)
+    return featuredTracks[(currentIndex + 1) % featuredTracks.length]
+  }, [currentTrack.id])
+
+  const getPreviousTrack = useCallback(() => {
+    const currentIndex = featuredTracks.findIndex(t => t.id === currentTrack.id)
+    return featuredTracks[(currentIndex - 1 + featuredTracks.length) % featuredTracks.length]
+  }, [currentTrack.id])
+
+  // Handle play/pause
+  const handlePlayPause = useCallback(async () => {
+    if (station) {
+      try {
+        if (isConnected) {
+          disconnect()
+          setIsPlaying(false)
+        } else {
+          await connectToStream(`/api/stream/${station.id}`)
+          setIsPlaying(true)
+        }
+      } catch (err) {
+        console.error('Playback toggle failed:', err)
+      }
+    } else {
+      setIsPlaying(!isPlaying)
+    }
+  }, [station, isConnected, disconnect, connectToStream])
 
   return (
     <div className={cn(
@@ -363,23 +391,7 @@ export function PlayerView() {
                   "h-16 w-16 rounded-full transition-all duration-300 hover:scale-110",
                   isPlaying ? "bg-primary hover:bg-primary/90" : "bg-primary hover:bg-primary/90"
                 )}
-                onClick={async () => {
-                  if (station) {
-                    try {
-                      if (isConnected) {
-                        disconnect()
-                        setIsPlaying(false)
-                      } else {
-                        await connectToStream(`/api/stream/${station.id}`)
-                        setIsPlaying(true)
-                      }
-                    } catch (err) {
-                      console.error('Playback toggle failed:', err)
-                    }
-                  } else {
-                    setIsPlaying(!isPlaying)
-                  }
-                }}
+                onClick={handlePlayPause}
                 disabled={isBuffering}
               >
                 <AnimatePresence mode="wait">

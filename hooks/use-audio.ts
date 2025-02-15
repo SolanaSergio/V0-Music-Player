@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAudioContext } from '@/components/shared/audio-provider'
 import { getStreamUrl } from '@/utils/stream-handler'
-import { Track } from '@/types/audio'
+import type { Track, RadioStation } from '@/types/audio'
 
-export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
-  const { audioContext, masterGain, createAnalyser, equalizerInput, equalizerOutput } = useAudioContext()
+type AudioSource = Track | RadioStation
+
+export function useAudio(tracks?: AudioSource[], initialTrackIndex = 0) {
+  const { audioContext, masterGain, createAnalyser } = useAudioContext()
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const retryTimeoutRef = useRef<NodeJS.Timeout>()
   const maxRetries = 3
@@ -47,7 +49,7 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
   }, [isLoading, allTracks.length])
 
   // Create audio element and connect to audio context
-  const connectToStream = useCallback(async (track: Track, retryCount = 0) => {
+  const connectToStream = useCallback(async (audioSource: AudioSource, retryCount = 0) => {
     if (!audioContext || !masterGain) {
       console.error('Audio context or master gain not initialized')
       setError('Audio system not initialized')
@@ -58,10 +60,11 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
     try {
       setError(null)
       setIsLoading(true)
-      console.log('Connecting to stream:', track.audioUrl)
+      const audioUrl = 'streamUrl' in audioSource ? audioSource.streamUrl : audioSource.audioUrl
+      console.log('Connecting to stream:', audioUrl)
 
       // Get stream URL with format detection
-      const { url, format } = await getStreamUrl(track.audioUrl)
+      const { url, format } = await getStreamUrl(audioUrl)
       console.log('Stream URL resolved:', { url, format })
 
       // Create new audio element if needed
@@ -100,8 +103,8 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
       })
 
       // Connect to audio context
-      if (!sourceRef.current) {
-        sourceRef.current = audioContext.createMediaElementSource(audio)
+      if (!sourceNodeRef.current) {
+        sourceNodeRef.current = audioContext.createMediaElementSource(audio)
       }
 
       // Create new analyzer if needed
@@ -109,19 +112,18 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
         analyserRef.current = createAnalyser()
       }
 
-      // Connect nodes with equalizer chain
-      const source = sourceRef.current
+      // Connect nodes
+      const sourceNode = sourceNodeRef.current
       const analyser = analyserRef.current
 
-      if (analyser && equalizerInput && equalizerOutput) {
-        // Source -> EQ Input -> [EQ Filters] -> EQ Output -> Analyzer -> Destination
-        source.connect(equalizerInput)
-        if (analyser) {
-          analyser.connect(audioContext.destination)
-        }
+      if (analyser) {
+        // Source -> Analyzer -> Master Gain -> Destination
+        sourceNode.connect(analyser)
+        analyser.connect(masterGain)
+        masterGain.connect(audioContext.destination)
       } else {
-        // Fallback if no equalizer or analyzer
-        source.connect(masterGain)
+        // Fallback if no analyzer
+        sourceNode.connect(masterGain)
         masterGain.connect(audioContext.destination)
       }
 
@@ -161,7 +163,7 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
       if (retryCount < maxRetries) {
         console.log(`Retrying connection (${retryCount + 1}/${maxRetries})...`)
         retryTimeoutRef.current = setTimeout(() => {
-          connectToStream(track, retryCount + 1)
+          connectToStream(audioSource, retryCount + 1)
         }, retryDelayMs)
         return
       }
@@ -169,7 +171,7 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
       setError(error instanceof Error ? error.message : 'Failed to connect to stream')
       setIsLoading(false)
     }
-  }, [audioContext, masterGain, createAnalyser, volume, currentTrackIndex, allTracks.length, advanceToNextTrack, equalizerInput, equalizerOutput])
+  }, [audioContext, masterGain, volume, currentTrackIndex, allTracks.length, advanceToNextTrack, createAnalyser])
 
   // Clean up on unmount
   useEffect(() => {
@@ -180,8 +182,8 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
       if (pauseTimeoutRef.current) {
         clearTimeout(pauseTimeoutRef.current)
       }
-      if (sourceRef.current) {
-        sourceRef.current.disconnect()
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.disconnect()
       }
       if (analyserRef.current) {
         analyserRef.current.disconnect()

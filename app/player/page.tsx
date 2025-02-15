@@ -10,19 +10,8 @@ import { useMobile } from '@/hooks/use-mobile'
 export default function PlayerPage() {
   const { isMobile, isClient } = useMobile()
   const searchParams = useSearchParams()
-  const router = useRouter()
   const stationId = searchParams.get('station')
-
-  // Redirect if no station is selected
-  useEffect(() => {
-    if (!stationId) {
-      router.push('/radio')
-    }
-  }, [stationId, router])
-
-  if (!stationId) {
-    return null
-  }
+  const trackId = searchParams.get('track')
 
   // Return a minimal layout during SSR
   if (!isClient) {

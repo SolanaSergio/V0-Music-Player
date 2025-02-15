@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
+import type { AudioSource, Track, RadioStation } from '@/types/audio'
 
 // Add type for webkit prefix
 interface Window {
@@ -14,6 +15,15 @@ interface AudioContextState {
   resumeContext: () => Promise<void>
   createAnalyser: () => AnalyserNode | null
   setMasterVolume: (value: number) => void
+  currentSource: AudioSource | null
+  isPlaying: boolean
+  volume: number
+  isMuted: boolean
+  play: (source: AudioSource) => void
+  pause: () => void
+  toggle: () => void
+  setVolume: (volume: number) => void
+  toggleMute: () => void
 }
 
 const AudioContext = createContext<AudioContextState>({
@@ -23,6 +33,15 @@ const AudioContext = createContext<AudioContextState>({
   resumeContext: async () => {},
   createAnalyser: () => null,
   setMasterVolume: () => {},
+  currentSource: null,
+  isPlaying: false,
+  volume: 1,
+  isMuted: false,
+  play: () => {},
+  pause: () => {},
+  toggle: () => {},
+  setVolume: () => {},
+  toggleMute: () => {},
 })
 
 export function useAudioContext() {
@@ -155,6 +174,15 @@ export function AudioProvider({ children }: AudioProviderProps) {
         resumeContext,
         createAnalyser,
         setMasterVolume,
+        currentSource: null,
+        isPlaying: false,
+        volume: 1,
+        isMuted: false,
+        play: () => {},
+        pause: () => {},
+        toggle: () => {},
+        setVolume: () => {},
+        toggleMute: () => {},
       }}
     >
       {children}

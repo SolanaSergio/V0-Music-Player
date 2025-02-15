@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAudioContext } from '@/components/shared/audio-provider'
-import { throttle } from 'lodash'
+import throttle from 'lodash/throttle'
 import type { StreamError, TrackMetadata, RadioStation } from '@/types/audio'
 import { StreamErrorType } from '@/types/audio'
 import { recognizeAudio } from '@/lib/audio-recognition'
@@ -617,22 +617,29 @@ export function useRadioStream(): UseRadioStreamReturn {
       const stationId = currentUrlRef.current.split('/').pop()
       const station = radioStations.find((s: RadioStation) => s.id === stationId)
       
-      if (!station?.directStreamUrl) {
-        console.warn('No direct stream URL available for metadata fetching')
+      if (!station) {
+        console.warn('Station not found for metadata fetching')
         return
       }
 
+      // Use directStreamUrl if available, otherwise fall back to streamUrl
+      const metadataUrl = station.directStreamUrl || station.streamUrl
+      
       console.log('Fetching metadata for station:', station.name)
       const response = await fetch('/api/stream/metadata', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: station.directStreamUrl })
+        body: JSON.stringify({ 
+          url: metadataUrl,
+          interval: station.metadataInterval
+        })
       })
 
       if (!response.ok) {
-        console.error('Metadata fetch failed:', await response.text())
+        const errorText = await response.text()
+        console.error('Metadata fetch failed:', errorText)
         return
       }
 
@@ -644,19 +651,41 @@ export function useRadioStream(): UseRadioStreamReturn {
         console.log('Parsed metadata:', metadata)
         
         if (metadata) {
-          // Always attempt to fetch lyrics
-          const lyricsResponse = await fetchLyrics(metadata.artist, metadata.title)
-          console.log('Lyrics response:', lyricsResponse)
+          // Create properly typed metadata object
+          const enhancedMetadata: TrackMetadata = {
+            artist: metadata.artist,
+            title: metadata.title,
+            timestamp: metadata.timestamp,
+            station: {
+              id: station.id,
+              name: station.name,
+              format: station.format,
+              bitrate: station.bitrate,
+              language: station.language,
+              country: station.country
+            }
+          }
+
+          // Attempt to fetch lyrics if we have both artist and title
+          if (metadata.artist && metadata.title) {
+            try {
+              const lyricsResponse = await fetchLyrics(metadata.artist, metadata.title)
+              console.log('Lyrics response:', lyricsResponse)
+              
+              if (lyricsResponse.success && lyricsResponse.lyrics) {
+                enhancedMetadata.lyrics = lyricsResponse.lyrics
+              }
+            } catch (error) {
+              console.error('Error fetching lyrics:', error)
+            }
+          }
           
-          setCurrentMetadata({
-            ...metadata,
-            lyrics: lyricsResponse.success ? lyricsResponse.lyrics : undefined
-          })
+          setCurrentMetadata(enhancedMetadata)
         }
       }
     } catch (error) {
       console.error('Error updating metadata:', error)
-      return
+      // Don't throw the error to prevent breaking the metadata polling
     }
   }, [parseICYMetadata])
 

@@ -5,53 +5,53 @@ export type GenreIconType = 'electronic' | 'classical' | 'jazz' | 'ambient'
 export interface Genre {
   id: string
   name: string
-  description: string
-  image: string
-  icon: string
+  description?: string
+  image?: string
+  icon?: string
 }
 
 export interface RadioStation {
   id: string
   name: string
-  description: string
-  genre: string
-  image: string
+  description?: string
+  image?: string
   streamUrl: string
   directStreamUrl?: string
-  format: string
-  bitrate: number
-  region: string
-  language: string
-  isLive: boolean
-  tags: string[]
-  trending?: boolean
+  genre?: string
+  language?: string
+  country?: string
+  website?: string
+  isLive?: boolean
   listeners?: number
+  trending?: boolean
+  featured?: boolean
+  tags?: string[]
+  bitrate?: number
+  format?: string
+  metadataInterval?: number
 }
 
 export interface Track {
   id: string
   title: string
   artist: string
-  album: string
+  album?: string
   duration: number
-  genre: string
-  image: string
-  audioUrl: string
+  artwork?: string
+  streamUrl: string
+  lyrics?: string
   isLive?: boolean
 }
 
+export type AudioSource = Track | RadioStation
+
 export interface AudioState {
-  isLoading: boolean
-  error: Error | null
+  isPlaying: boolean
+  volume: number
   currentTime: number
   duration: number
-  isBuffering: boolean
-  streamInfo?: {
-    bitrate?: number
-    format?: string
-    connected: boolean
-  }
-  audioFeatures?: AudioFeatures
+  buffered: number
+  error: string | null
 }
 
 export interface AudioFeatures {
@@ -153,17 +153,16 @@ export interface RippleEffect {
 }
 
 export enum StreamErrorType {
-  CONNECTION_TIMEOUT = 'CONNECTION_TIMEOUT',
-  PLAYBACK_NOT_ALLOWED = 'PLAYBACK_NOT_ALLOWED',
-  FORMAT_NOT_SUPPORTED = 'FORMAT_NOT_SUPPORTED',
   NETWORK_ERROR = 'NETWORK_ERROR',
-  CONTEXT_INIT_FAILED = 'CONTEXT_INIT_FAILED',
+  DECODE_ERROR = 'DECODE_ERROR',
+  ABORTED = 'ABORTED',
   UNKNOWN = 'UNKNOWN'
 }
 
 export interface StreamError {
   type: StreamErrorType
   message: string
+  timestamp: number
 }
 
 export interface StreamState {
@@ -187,8 +186,14 @@ export interface TrackMetadata {
   artist: string
   title: string
   timestamp: number
-  recognized?: RecognizedSong
-  lyrics?: string
+  station?: {
+    id: string
+    name: string
+    format?: string
+    bitrate?: number
+    language?: string
+    country?: string
+  }
 }
 
 export interface UseRadioStreamReturn {
@@ -232,6 +237,28 @@ export interface GeniusSearchHit {
     primary_artist: {
       name: string
     }
+  }
+}
+
+export interface AudioVisualizerData {
+  frequency: {
+    average: number
+    peaks: number[]
+    bands: {
+      bass: number
+      midrange: number
+      treble: number
+    }
+  }
+  time: {
+    waveform: Float32Array
+    volume: number
+    zeroCrossings: number
+  }
+  beat: {
+    isBeat: boolean
+    energy: number
+    interval: number
   }
 }
 
