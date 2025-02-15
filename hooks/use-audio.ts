@@ -13,6 +13,7 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
   const retryTimeoutRef = useRef<NodeJS.Timeout>()
   const maxRetries = 3
   const retryDelayMs = 2000
+  const pauseTimeoutRef = useRef<NodeJS.Timeout>()
 
   const [currentTrackIndex, setCurrentTrackIndex] = useState(initialTrackIndex)
   const [error, setError] = useState<string | null>(null)
@@ -176,6 +177,9 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current)
       }
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current)
+      }
       if (sourceRef.current) {
         sourceRef.current.disconnect()
       }
@@ -227,24 +231,53 @@ export function useAudio(tracks?: Track[], initialTrackIndex = 0) {
     }
   }, [audioContext, isPlaying])
 
-  // Playback controls
+  // Playback controls with improved mobile handling
   const play = useCallback(async () => {
     if (!audioRef.current) return
-    if (audioContext?.state === 'suspended') {
-      await audioContext.resume()
+    try {
+      if (audioContext?.state === 'suspended') {
+        await audioContext.resume()
+      }
+      await audioRef.current.play()
+      setIsPlaying(true)
+    } catch (err) {
+      console.error('Error playing audio:', err)
+      setError(err instanceof Error ? err.message : 'Failed to play audio')
+      setIsPlaying(false)
     }
-    await audioRef.current.play()
   }, [audioContext])
 
   const pause = useCallback(() => {
-    audioRef.current?.pause()
+    if (!audioRef.current) return
+    try {
+      // Clear any existing pause timeout
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current)
+      }
+      
+      // Set a timeout to ensure pause is executed
+      pauseTimeoutRef.current = setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.pause()
+          setIsPlaying(false)
+        }
+      }, 50)
+    } catch (err) {
+      console.error('Error pausing audio:', err)
+      setError(err instanceof Error ? err.message : 'Failed to pause audio')
+    }
   }, [])
 
   const togglePlay = useCallback(async () => {
-    if (isPlaying) {
-      pause()
-    } else {
-      await play()
+    try {
+      if (isPlaying) {
+        pause()
+      } else {
+        await play()
+      }
+    } catch (err) {
+      console.error('Error toggling playback:', err)
+      setError(err instanceof Error ? err.message : 'Failed to toggle playback')
     }
   }, [isPlaying, pause, play])
 

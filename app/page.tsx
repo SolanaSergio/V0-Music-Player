@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense } from 'react'
 import { MobileLayout } from '@/components/mobile/mobile-layout'
 import { MobileHome } from '@/components/mobile/mobile-home'
-import { Suspense } from 'react'
 import { RadioStations } from '@/components/desktop/radio-stations'
 import { HeroBanner } from '@/components/desktop/hero-banner'
 import { WelcomeMessage } from '@/components/desktop/welcome-message'
@@ -11,18 +10,15 @@ import { GenreExplorer } from '@/components/desktop/genre-explorer'
 import { Loading } from '@/components/ui/loading'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
 import { genres } from '@/data/audio'
+import { useMobile } from '@/hooks/use-mobile'
 
 export default function Home() {
-  const [isMobile, setIsMobile] = useState(false)
+  const { isMobile, isClient } = useMobile()
 
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  // Return a minimal layout during SSR
+  if (!isClient) {
+    return <div className="min-h-screen bg-background" />
+  }
 
   if (isMobile) {
     return (

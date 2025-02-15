@@ -1,0 +1,35 @@
+---
+description: Core TypeScript configuration rules focusing on strict type checking and error prevention
+globs: .ts, .tsx, .d.ts
+---
+# Type Checking
+enforce strict null checks
+require explicit return types
+prevent implicit any usage
+enforce literal types
+require discriminated unions
+enforce tagged templates
+
+# Error Prevention
+enforce exhaustive checks
+require error boundaries
+prevent unchecked indexing
+enforce const assertions
+require explicit overrides
+prevent type widening
+
+# Code Organization
+enforce barrel patterns
+require feature folders
+enforce domain separation
+implement type grouping
+require interface segregation
+enforce naming conventions
+
+# Anti-Patterns
+prevent type assertion
+avoid type casting
+prevent any usage
+avoid namespace merging
+prevent interface merging
+enforce single responsibility

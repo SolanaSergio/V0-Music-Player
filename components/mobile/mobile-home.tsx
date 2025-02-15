@@ -1,378 +1,418 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React from 'react'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { ImageLoader } from '@/components/shared/image-loader'
-import { PlayIcon, PauseIcon, Radio, Mic2, Globe2, Moon, Sun } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { radioStations } from '@/data/audio'
+import { 
+  Headphones, 
+  Music2, 
+  Radio, 
+  Mic2,
+  Heart,
+  Sparkles,
+  CloudRain,
+  Zap,
+  Coffee,
+  Moon,
+  Sun,
+  Stars,
+  LucideIcon,
+  Play,
+  Shuffle,
+  TrendingUp,
+  Clock,
+  ListMusic
+} from 'lucide-react'
 import { motion } from 'framer-motion'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
+import { Card } from '@/components/ui/card'
+import { ErrorBoundary } from '@/components/shared/error-boundary'
+import { Suspense } from 'react'
 import { Badge } from '@/components/ui/badge'
 
-interface RadioStationProps {
+// Types
+interface MoodCategory {
+  id: string
+  name: string
+  icon: LucideIcon
+  color: string
+  bgColor: string
+}
+
+interface FeaturedStation {
   id: string
   title: string
-  genre: string
-  listeners: string
-  imageUrl?: string
-  isLive?: boolean
-  isPlaying?: boolean
-  onPlay?: () => void
+  description: string
+  icon: LucideIcon
+  color: string
 }
 
-function RadioStationCard({ 
-  id, 
-  title, 
-  genre, 
-  listeners, 
-  imageUrl, 
-  isLive, 
-  isPlaying, 
-  onPlay 
-}: RadioStationProps) {
-  return (
-    <motion.div
-      key={id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="group touch-none"
-    >
-      <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-card hover:bg-accent/50 active:bg-accent transition-colors">
-        <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden shrink-0 bg-muted">
-          <ImageLoader
-            src={imageUrl || `/radio-stations/${title.toLowerCase().replace(/\s+/g, '-')}.jpg`}
-            alt={title}
-            fill
-            className="object-cover"
-            fallback={`/radio-stations/default-radio.jpg`}
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm sm:text-base font-medium truncate">{title}</h3>
-            {isLive && (
-              <Badge variant="secondary" className="shrink-0 text-[10px] sm:text-xs px-1 py-0 sm:px-2 sm:py-0.5">LIVE</Badge>
-            )}
-          </div>
-          <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
-            <span>{genre}</span>
-            <span>•</span>
-            <span>{listeners} listeners</span>
-          </div>
-        </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 sm:h-10 sm:w-10 shrink-0"
-          onClick={onPlay}
-          aria-label={isPlaying ? `Pause ${title}` : `Play ${title}`}
-        >
-          {isPlaying ? (
-            <PauseIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-          ) : (
-            <PlayIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-          )}
-        </Button>
-      </div>
-    </motion.div>
-  )
-}
-
-interface CategoryCardProps {
-  id: string
+interface QuickActionProps {
+  icon: LucideIcon
   title: string
-  icon: React.ElementType
-  stationCount: number
-  imageUrl: string
-  onClick?: () => void
+  onClick: () => Promise<void>
+  gradient: string
 }
 
-function CategoryCard({ 
-  id, 
-  title, 
-  icon: Icon, 
-  stationCount, 
-  imageUrl, 
-  onClick 
-}: CategoryCardProps) {
-  return (
-    <motion.div
-      key={id}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className="w-[140px] sm:w-[160px] shrink-0 touch-none"
-    >
-      <div className="group">
-        <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
-          <ImageLoader
-            src={imageUrl}
-            alt={title}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            fallback={`/radio-categories/${title.toLowerCase().replace(/\s+/g, '-')}.jpg`}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/0" />
-          <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 right-2 sm:right-3">
-            <div className="flex items-center gap-1.5 sm:gap-2 text-white">
-              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="text-sm sm:text-base font-medium">{title}</span>
-            </div>
-            <div className="text-xs sm:text-sm text-white/80">
-              {stationCount} stations
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
+// Constants
+const MOOD_CATEGORIES: MoodCategory[] = [
+  { id: 'happy', name: 'Happy', icon: Sun, color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
+  { id: 'chill', name: 'Chill', icon: CloudRain, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+  { id: 'energetic', name: 'Energetic', icon: Zap, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+  { id: 'focus', name: 'Focus', icon: Coffee, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
+  { id: 'romantic', name: 'Romantic', icon: Heart, color: 'text-pink-500', bgColor: 'bg-pink-500/10' },
+  { id: 'sleep', name: 'Sleep', icon: Moon, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10' }
+]
 
-function LoadingStationCard() {
-  return (
-    <div className="flex items-center gap-2 p-3">
-      <Skeleton className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg shrink-0" />
-      <div className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3 w-1/2" />
-      </div>
-    </div>
-  )
-}
-
-function LoadingCategoryCard() {
-  return (
-    <div className="w-[140px] sm:w-[160px] shrink-0">
-      <Skeleton className="aspect-square rounded-lg" />
-    </div>
-  )
-}
-
-function GreetingCard() {
-  const [greeting, setGreeting] = useState('Good Morning')
-  const [icon, setIcon] = useState<React.ElementType>(Sun)
-  const [bgImage, setBgImage] = useState('')
-
-  useEffect(() => {
-    const hour = new Date().getHours()
-    if (hour >= 5 && hour < 12) {
-      setGreeting('Good Morning')
-      setIcon(Sun)
-      setBgImage('https://images.unsplash.com/photo-1470252649378-9c29740c9fa8')
-    } else if (hour >= 12 && hour < 18) {
-      setGreeting('Good Afternoon')
-      setIcon(Sun)
-      setBgImage('https://images.unsplash.com/photo-1470252649378-9c29740c9fa8')
-    } else {
-      setGreeting('Good Evening')
-      setIcon(Moon)
-      setBgImage('https://images.unsplash.com/photo-1493540447904-49763eecb26f')
-    }
-  }, [])
-
-  return (
-    <div className="relative rounded-lg overflow-hidden w-full aspect-[3/1] max-w-full">
-      <ImageLoader
-        src={bgImage}
-        alt={greeting}
-        fill
-        className="object-cover brightness-[0.8]"
-        fallback="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8"
-      />
-      <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-4">
-        <div className="flex items-center gap-1.5 text-white">
-          {React.createElement(icon, { className: "h-3.5 w-3.5" })}
-          <span className="text-xs font-medium">Now Playing</span>
-        </div>
-        <div>
-          <h1 className="text-base font-semibold text-white mb-0.5">{greeting}</h1>
-          <p className="text-xs text-white/90 line-clamp-1">Discover stations perfect for your mood</p>
-        </div>
-      </div>
-    </div>
-  )
-}
+const FEATURED_STATIONS: FeaturedStation[] = [
+  {
+    id: 'featured-1',
+    title: 'Top Hits Radio',
+    description: 'The hottest hits right now',
+    icon: Headphones,
+    color: 'from-purple-500 to-pink-500'
+  },
+  {
+    id: 'featured-2',
+    title: 'Classical Vibes',
+    description: 'Timeless classical music',
+    icon: Music2,
+    color: 'from-blue-500 to-cyan-500'
+  },
+  {
+    id: 'featured-3',
+    title: 'Jazz Lounge',
+    description: 'Smooth jazz all day',
+    icon: Radio,
+    color: 'from-amber-500 to-orange-500'
+  }
+]
 
 export function MobileHome() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentStationId, setCurrentStationId] = useState<string | null>(null)
+  const router = useRouter()
 
-  // Memoize static data to prevent unnecessary re-renders
-  const featuredStations = useMemo(() => [
-    { 
-      id: '1', 
-      title: "Classical Radio Berlin", 
-      genre: "Classical",
-      listeners: "1.2k",
-      isLive: true,
-      imageUrl: "https://images.unsplash.com/photo-1507838153414-b4b713384a76"
-    },
-    { 
-      id: '2', 
-      title: "Jazz FM London", 
-      genre: "Jazz",
-      listeners: "3.4k",
-      isLive: true,
-      imageUrl: "https://images.unsplash.com/photo-1511192336575-5a79af67a629"
-    },
-    { 
-      id: '3', 
-      title: "Electronic Beats FM", 
-      genre: "Electronic",
-      listeners: "5.1k",
-      isLive: true,
-      imageUrl: "https://images.unsplash.com/photo-1598387993441-a364f854c3e1"
+  const handleNavigation = async (path: string) => {
+    try {
+      await router.push(path)
+    } catch (error) {
+      console.error('Navigation failed:', error)
     }
-  ], [])
-
-  const popularStations = useMemo(() => [
-    { 
-      id: '4', 
-      title: "Deep House Radio", 
-      genre: "Electronic",
-      listeners: "4.3k",
-      isLive: true,
-      imageUrl: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"
-    },
-    { 
-      id: '5', 
-      title: "World Music Channel", 
-      genre: "World",
-      listeners: "1.5k",
-      isLive: true,
-      imageUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7"
-    },
-    { 
-      id: '6', 
-      title: "News Radio 24/7", 
-      genre: "News",
-      listeners: "8.2k",
-      isLive: true,
-      imageUrl: "https://images.unsplash.com/photo-1495020689067-958852a7765e"
-    }
-  ], [])
-
-  const categories = useMemo(() => [
-    { 
-      id: '1', 
-      title: "Classical",
-      icon: Radio,
-      stationCount: 24,
-      imageUrl: "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0"
-    },
-    { 
-      id: '2', 
-      title: "Jazz & Blues",
-      icon: Radio,
-      stationCount: 18,
-      imageUrl: "https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f"
-    },
-    { 
-      id: '3', 
-      title: "Electronic",
-      icon: Radio,
-      stationCount: 32,
-      imageUrl: "https://images.unsplash.com/photo-1571115764595-644a1f56a55c"
-    },
-    { 
-      id: '4', 
-      title: "News & Talk",
-      icon: Mic2,
-      stationCount: 45,
-      imageUrl: "https://images.unsplash.com/photo-1495020689067-958852a7765e"
-    },
-    { 
-      id: '5', 
-      title: "International",
-      icon: Globe2,
-      stationCount: 74,
-      imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa"
-    }
-  ], [])
-
-  // Simulate loading
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000)
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Handle station play/pause
-  const handleStationPlay = (stationId: string) => {
-    setCurrentStationId(prevId => prevId === stationId ? null : stationId)
   }
 
   return (
-    <div className="w-full max-w-md mx-auto pb-20">
-      {/* Greeting Card Container */}
-      <div className="px-4">
-        <div className="w-full max-w-full">
-          <GreetingCard />
-        </div>
-      </div>
+    <ErrorBoundary>
+      <div className="flex flex-col min-h-[100dvh] bg-background overflow-y-auto pb-safe-area-inset-bottom">
+        {/* Hero Section */}
+        <motion.div 
+          className="relative w-full h-[30vh] min-h-[220px] overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20">
+            <div className="absolute inset-0 bg-grid-white/10" />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
+          <div className="relative flex flex-col justify-end h-full px-6 pb-8 space-y-3">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <h1 className="text-3xl font-bold tracking-tight">
+                Good {getTimeOfDay()}
+              </h1>
+              <p className="text-base text-muted-foreground mt-1">
+                Discover your perfect soundtrack
+              </p>
+            </motion.div>
+            
+            {/* New: Daily Mix Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex items-center gap-4 p-4 rounded-xl bg-black/20 backdrop-blur-sm border border-white/10"
+            >
+              <div className="shrink-0">
+                <div className="h-12 w-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-sm">Your Daily Mix</h3>
+                <p className="text-xs text-muted-foreground truncate">Fresh picks based on your taste</p>
+              </div>
+              <Button 
+                size="sm" 
+                className="shrink-0 h-8 bg-primary"
+                onClick={() => handleNavigation('/daily-mix')}
+              >
+                <Play className="h-4 w-4 mr-1" /> Play
+              </Button>
+            </motion.div>
+          </div>
+        </motion.div>
 
-      {/* Featured Stations */}
-      <div className="mt-3">
-        <section>
-          <h2 className="text-base font-semibold mb-2 px-4">Featured Stations</h2>
-          <div className="space-y-1.5 px-4">
-            {isLoading ? (
-              Array(3).fill(0).map((_, i) => <LoadingStationCard key={i} />)
-            ) : (
-              featuredStations.map(station => (
-                <RadioStationCard 
+        {/* Quick Actions */}
+        <motion.section 
+          className="px-4 -mt-6 mb-6 relative z-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <div className="grid grid-cols-3 gap-3">
+            <QuickActionCard
+              icon={Mic2}
+              title="Live Radio"
+              onClick={() => handleNavigation('/radio')}
+              gradient="from-pink-500 to-rose-500"
+            />
+            <QuickActionCard
+              icon={Sparkles}
+              title="Discover"
+              onClick={() => handleNavigation('/discover')}
+              gradient="from-violet-500 to-purple-500"
+            />
+            <QuickActionCard
+              icon={Stars}
+              title="For You"
+              onClick={() => handleNavigation('/recommendations')}
+              gradient="from-blue-500 to-cyan-500"
+            />
+          </div>
+        </motion.section>
+
+        {/* Mood Section */}
+        <Suspense fallback={<MoodSectionSkeleton />}>
+          <motion.section 
+            className="px-4 py-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <h2 className="text-lg font-semibold mb-4">How are you feeling?</h2>
+            <ScrollArea className="w-full">
+              <div className="flex space-x-3 pb-4">
+                {MOOD_CATEGORIES.map((mood) => (
+                  <Button
+                    key={mood.id}
+                    variant="outline"
+                    className={`flex flex-col items-center justify-center h-24 w-24 space-y-2 rounded-xl border-2 ${mood.bgColor} hover:scale-105 transition-transform`}
+                    onClick={() => handleNavigation(`/mood/${mood.id}`)}
+                  >
+                    {<mood.icon className={`h-8 w-8 ${mood.color}`} />}
+                    <span className="text-sm font-medium">{mood.name}</span>
+                  </Button>
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </motion.section>
+        </Suspense>
+
+        {/* New: Recently Played */}
+        <motion.section
+          className="px-4 py-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Recently Played</h2>
+            <Button variant="ghost" size="sm" className="text-primary">
+              <Clock className="h-4 w-4 mr-1" /> View All
+            </Button>
+          </div>
+          <ScrollArea className="w-full">
+            <div className="flex space-x-4 pb-4">
+              {radioStations.slice(0, 6).map((station) => (
+                <motion.div
                   key={station.id}
-                  {...station}
-                  isPlaying={currentStationId === station.id}
-                  onPlay={() => handleStationPlay(station.id)}
-                />
-              ))
-            )}
-          </div>
-        </section>
-      </div>
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="shrink-0"
+                >
+                  <Card className="w-[140px] p-3 hover:bg-accent transition-colors cursor-pointer">
+                    <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-3">
+                      <ImageLoader
+                        src={station.image}
+                        alt={station.name}
+                        fill
+                        className="object-cover"
+                        fallback="/radio-stations/default-radio.jpg"
+                        sizes="140px"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Play className="h-8 w-8 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="font-medium text-sm line-clamp-1">{station.name}</h3>
+                    <p className="text-xs text-muted-foreground">{station.genre}</p>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </motion.section>
 
-      {/* Browse by Category */}
-      <section className="mt-3 space-y-2">
-        <h2 className="text-base font-semibold px-4">Browse by Category</h2>
-        <ScrollArea>
-          <div className="flex pb-2 px-4">
-            {isLoading ? (
-              Array(5).fill(0).map((_, i) => (
-                <div key={i} className="mr-3 last:mr-0">
-                  <LoadingCategoryCard />
-                </div>
-              ))
-            ) : (
-              categories.map(category => (
-                <div key={category.id} className="mr-3 last:mr-0">
-                  <CategoryCard {...category} />
-                </div>
-              ))
-            )}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
-      </section>
+        {/* Featured Stations */}
+        <Suspense fallback={<FeaturedStationsSkeleton />}>
+          <motion.section 
+            className="px-4 py-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Featured Stations</h2>
+              <Button variant="ghost" size="sm" className="text-primary">
+                <Shuffle className="h-4 w-4 mr-1" /> Shuffle Play
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {FEATURED_STATIONS.map((station) => (
+                <Card
+                  key={station.id}
+                  className="relative overflow-hidden hover:bg-accent transition-colors cursor-pointer group"
+                  onClick={() => handleNavigation(`/station/${station.id}`)}
+                >
+                  <div className={`absolute inset-0 opacity-10 bg-gradient-to-r ${station.color} group-hover:opacity-20 transition-opacity`} />
+                  <div className="relative p-4 flex items-center space-x-4">
+                    <div className={`p-3 rounded-xl bg-gradient-to-br ${station.color} transform group-hover:scale-110 transition-transform`}>
+                      <station.icon className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{station.title}</h3>
+                      <p className="text-sm text-muted-foreground">{station.description}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </motion.section>
+        </Suspense>
 
-      {/* Popular Now */}
-      <section className="mt-3">
-        <h2 className="text-base font-semibold mb-2 px-4">Popular Now</h2>
-        <div className="space-y-1.5 px-4">
-          {isLoading ? (
-            Array(3).fill(0).map((_, i) => <LoadingStationCard key={i} />)
-          ) : (
-            popularStations.map(station => (
-              <RadioStationCard 
+        {/* New: Trending Now */}
+        <motion.section
+          className="px-4 py-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Trending Now</h2>
+              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                <TrendingUp className="h-3 w-3 mr-1" />
+                Live
+              </Badge>
+            </div>
+            <Button variant="ghost" size="sm" className="text-primary">
+              <ListMusic className="h-4 w-4 mr-1" /> View All
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {radioStations.filter(s => s.trending).slice(0, 4).map((station) => (
+              <motion.div
                 key={station.id}
-                {...station}
-                isPlaying={currentStationId === station.id}
-                onPlay={() => handleStationPlay(station.id)}
-              />
-            ))
-          )}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Card 
+                  className="p-3 hover:bg-accent transition-colors cursor-pointer"
+                  onClick={() => handleNavigation(`/station/${station.id}`)}
+                >
+                  <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-2">
+                    <ImageLoader
+                      src={station.image}
+                      alt={station.name}
+                      fill
+                      className="object-cover"
+                      fallback="/radio-stations/default-radio.jpg"
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                    />
+                    <div className="absolute bottom-2 right-2">
+                      <Badge className="bg-black/60 text-white border-0">
+                        {station.listeners?.toLocaleString()} listening
+                      </Badge>
+                    </div>
+                  </div>
+                  <h3 className="font-medium text-sm line-clamp-1">{station.name}</h3>
+                  <p className="text-xs text-muted-foreground">{station.genre}</p>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+
+        {/* Explore More Button */}
+        <div className="sticky bottom-0 p-4 mt-auto bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
+          <Button 
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+            onClick={() => handleNavigation('/explore')}
+          >
+            Explore More
+          </Button>
         </div>
-      </section>
+      </div>
+    </ErrorBoundary>
+  )
+}
+
+function QuickActionCard({ 
+  icon: Icon, 
+  title, 
+  onClick, 
+  gradient 
+}: QuickActionProps) {
+  return (
+    <Button
+      variant="outline"
+      className="relative h-24 flex flex-col items-center justify-center space-y-2 overflow-hidden hover:scale-105 transition-transform"
+      onClick={onClick}
+    >
+      <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${gradient} group-hover:opacity-20 transition-opacity`} />
+      <div className={`relative p-2 rounded-xl bg-gradient-to-br ${gradient}`}>
+        <Icon className="h-6 w-6 text-white" />
+      </div>
+      <span className="text-sm font-medium relative">{title}</span>
+    </Button>
+  )
+}
+
+function MoodSectionSkeleton() {
+  return (
+    <div className="px-4 py-6 animate-pulse">
+      <div className="h-6 w-32 bg-muted rounded mb-4" />
+      <div className="flex space-x-3">
+        {Array(4).fill(0).map((_, i) => (
+          <div key={i} className="h-24 w-24 bg-muted rounded-xl" />
+        ))}
+      </div>
     </div>
   )
+}
+
+function FeaturedStationsSkeleton() {
+  return (
+    <div className="px-4 py-6 animate-pulse">
+      <div className="h-6 w-40 bg-muted rounded mb-4" />
+      <div className="space-y-3">
+        {Array(3).fill(0).map((_, i) => (
+          <div key={i} className="h-16 bg-muted rounded-lg" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function getTimeOfDay() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Morning'
+  if (hour < 17) return 'Afternoon'
+  return 'Evening'
 }

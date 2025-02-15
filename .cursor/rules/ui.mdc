@@ -1,0 +1,51 @@
+---
+description: Advanced UI/UX rules focusing on performance, accessibility, and user experience
+globs: .tsx, .jsx, .css, .scss, .ts
+---
+# Performance
+enforce component memoization
+require virtual scrolling
+implement code splitting
+enforce tree shaking
+require lazy loading
+implement render optimization
+
+# Accessibility
+require ARIA labels
+enforce keyboard navigation
+implement screen reader support
+require focus management
+enforce color contrast
+implement reduced motion
+
+# State Management
+implement atomic updates
+require immutable patterns
+enforce single source of truth
+implement state machines
+require predictable mutations
+enforce state normalization
+
+# Responsive Design
+implement container queries
+require fluid typography
+enforce breakpoint system
+implement layout shifts prevention
+require responsive images
+enforce mobile-first approach
+
+# Animation
+implement RAF for animations
+require hardware acceleration
+enforce animation throttling
+implement transition management
+require animation fallbacks
+enforce frame rate targets
+
+# Anti-Patterns
+prevent prop drilling
+avoid inline styles
+prevent layout thrashing
+avoid unnecessary renders
+prevent style conflicts
+avoid direct DOM manipulation

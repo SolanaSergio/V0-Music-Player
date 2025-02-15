@@ -1,0 +1,35 @@
+---
+description: Advanced state management rules for audio player with focus on predictability and performance
+globs: .ts, .tsx, .js, .jsx
+---
+# State Architecture
+enforce-immutable-updates: strict immutability pattern
+validate-state-transitions: state machine implementation
+detect-state-mutations: unauthorized mutation prevention
+analyze-state-dependencies: dependency graph validation
+enforce-selector-patterns: memoized selector usage
+detect-derived-state: unnecessary derived state
+
+# Performance Rules
+enforce-memoization: proper React.memo usage
+validate-render-cycles: unnecessary render prevention
+detect-heavy-computations: computation optimization
+analyze-re-render-patterns: re-render chain analysis
+enforce-batching: state update batching
+detect-context-abuse: context optimization
+
+# Data Flow
+enforce-unidirectional-flow: strict data flow patterns
+validate-prop-drilling: prop drilling prevention
+detect-state-coupling: loose coupling enforcement
+analyze-store-architecture: store organization check
+enforce-action-patterns: action creator usage
+detect-side-effects: side effect isolation
+
+# Error Handling
+enforce-error-boundaries: state recovery patterns
+validate-error-propagation: error handling flow
+detect-unhandled-states: state coverage check
+analyze-error-patterns: error pattern validation
+enforce-fallback-states: fallback state implementation
+detect-error-swallowing: proper error propagation

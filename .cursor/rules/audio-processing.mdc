@@ -1,0 +1,35 @@
+---
+description: High-precision rules for audio processing and manipulation with focus on performance optimization and memory management
+globs: .ts, .tsx, .js, .jsx
+---
+# Memory Optimization
+detect-memory-leak: audioContext disposal pattern validation
+enforce-buffer-cleanup: strict AudioBuffer cleanup enforcement
+validate-resource-release: comprehensive resource release checks
+analyze-memory-footprint: audio buffer size optimization
+enforce-pool-pattern: audio buffer pooling implementation
+detect-reference-cycles: audio node reference cycle detection
+
+# Performance Patterns
+validate-worker-usage: Web Worker implementation for processing
+enforce-stream-patterns: proper audio streaming patterns
+detect-blocking-operations: main thread blocking prevention
+analyze-processing-chain: audio processing chain optimization
+enforce-lazy-loading: codec and buffer lazy loading
+detect-redundant-processing: duplicate processing prevention
+
+# Error Prevention
+enforce-error-boundaries: comprehensive error capture
+validate-format-support: audio format compatibility check
+detect-unsafe-operations: unsafe audio operation prevention
+analyze-error-patterns: error handling pattern validation
+enforce-graceful-degradation: fallback implementation check
+detect-state-inconsistency: audio state validation
+
+# Code Quality
+enforce-naming-convention: audio-specific naming patterns
+validate-documentation: JSDoc coverage for audio operations
+detect-anti-patterns: common audio anti-pattern detection
+analyze-complexity: audio processing complexity validation
+enforce-type-safety: strict typing for audio operations
+detect-code-duplication: audio processing duplication check

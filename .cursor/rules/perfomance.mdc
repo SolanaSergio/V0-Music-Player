@@ -1,0 +1,51 @@
+---
+description: Advanced performance optimization rules for high-performance audio processing
+globs: .ts, .js, .tsx, .jsx, .wasm
+---
+# CPU Optimization
+implement worker threading
+require task scheduling
+enforce computation batching
+implement SIMD operations
+require lazy evaluation
+enforce CPU profiling
+
+# Memory Management
+implement object pooling
+require memory budgeting
+enforce garbage collection
+implement cache eviction
+require memory defragmentation
+enforce heap optimization
+
+# Async Operations
+implement async boundaries
+require promise pooling
+enforce concurrent limits
+implement queue management
+require priority scheduling
+enforce async cancellation
+
+# Resource Loading
+implement resource prioritization
+require progressive loading
+enforce asset optimization
+implement prefetching
+require code splitting
+enforce bundle optimization
+
+# Monitoring
+implement performance metrics
+require error tracking
+enforce logging system
+implement alerting
+require profiling tools
+enforce benchmark system
+
+# Anti-Patterns
+prevent memory leaks
+avoid blocking operations
+prevent event bubbling
+avoid layout thrashing
+prevent excessive GC
+avoid synchronous XHR

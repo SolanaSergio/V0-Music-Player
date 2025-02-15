@@ -1,0 +1,24 @@
+{
+  "morning": {
+    "url": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1920&h=1080&q=85&fit=crop",
+    "credit": "Paul Earle",
+    "description": "Sunrise through trees"
+  },
+  "afternoon": {
+    "url": "https://images.unsplash.com/photo-1470116892389-0de5d9770b2c?w=1920&h=1080&q=85&fit=crop",
+    "credit": "Redd F",
+    "description": "Afternoon sun through clouds"
+  },
+  "evening": {
+    "url": "https://images.unsplash.com/photo-1472120435266-53107fd0c44a?w=1920&h=1080&q=85&fit=crop",
+    "credit": "Elena Prokofyeva",
+    "description": "Evening sunset with purple sky"
+  },
+  "stations": {
+    "lofi-girl": {
+      "url": "https://images.unsplash.com/photo-1614741118887-7a4ee193a5fa?w=800&h=800&q=85&fit=crop",
+      "credit": "Keenan Constance",
+      "description": "Cozy study setup with warm lighting"
+    }
+  }
+} 

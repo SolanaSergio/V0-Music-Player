@@ -1,0 +1,35 @@
+---
+description: Advanced optimization rules for high-performance audio player implementation
+globs: .ts, .tsx, .js, .jsx
+---
+# Runtime Optimization
+enforce-worker-offloading: CPU-intensive task offloading
+validate-render-performance: render cycle optimization
+detect-memory-patterns: memory usage optimization
+analyze-computation-paths: computation path validation
+enforce-lazy-evaluation: lazy evaluation patterns
+detect-redundant-work: work duplication prevention
+
+# Resource Management
+enforce-resource-pooling: resource pool implementation
+validate-cleanup-patterns: resource cleanup validation
+detect-resource-leaks: resource leak prevention
+analyze-cache-strategy: cache strategy validation
+enforce-preload-patterns: preload implementation
+detect-dead-resources: unused resource cleanup
+
+# Network Optimization
+enforce-streaming-patterns: proper streaming implementation
+validate-chunk-sizes: chunk size optimization
+detect-network-waste: unnecessary network usage
+analyze-caching-strategy: cache strategy validation
+enforce-progressive-loading: progressive load patterns
+detect-redundant-fetches: fetch deduplication
+
+# Code Generation
+enforce-tree-shaking: dead code elimination
+validate-code-splitting: code splitting patterns
+detect-bundle-bloat: bundle size optimization
+analyze-module-graph: module dependency validation
+enforce-compression: compression strategy usage
+detect-duplicate-code: code duplication prevention

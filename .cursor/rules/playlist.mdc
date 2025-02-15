@@ -1,0 +1,50 @@
+---
+description: Advanced playlist management with focus on scalability and performance
+globs: .json, .pls, .m3u, .m3u8, .ts, .js
+---
+# Data Structure
+implement playlist versioning system
+require normalized playlist structure
+enforce unique track identifiers
+implement playlist chunking
+require metadata indexing
+enforce ordered track references
+
+# Performance
+implement virtual scrolling for large playlists
+require lazy loading of track metadata
+enforce playlist pagination
+implement delta updates
+require efficient search indexing
+enforce cache invalidation rules
+
+# Cross-Platform
+handle platform-specific paths
+implement universal URI scheme
+require path normalization
+enforce cross-platform compatibility
+implement platform-specific optimizations
+require universal time format
+
+# Sync Management
+implement conflict resolution
+require offline capabilities
+enforce sync markers
+implement merge strategies
+require version vectors
+enforce eventual consistency
+
+# Storage Patterns
+implement storage abstraction
+require indexedDB for large datasets
+enforce quota management
+implement storage fallbacks
+require progressive enhancement
+enforce storage optimization
+
+# Anti-Patterns
+prevent circular references
+avoid deep nesting
+prevent redundant metadata
+avoid sequential scanning
+prevent memory bloat

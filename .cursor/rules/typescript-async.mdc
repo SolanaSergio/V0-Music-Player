@@ -1,0 +1,43 @@
+---
+description: TypeScript rules for handling asynchronous operations and promise patterns
+globs: .ts, .tsx
+---
+# Promise Patterns
+enforce promise typing
+require error handling
+implement async iterators
+enforce cancelation
+require timeout handling
+implement retry logic
+
+# Error Handling
+enforce try-catch typing
+require error types
+implement result types
+enforce error boundaries
+require error propagation
+implement recovery patterns
+
+# Async Patterns
+enforce async/await
+require promise chains
+implement generators
+enforce concurrent ops
+require parallel execution
+implement queuing
+
+# State Management
+enforce loading states
+require error states
+implement retry states
+enforce timeout states
+require progress tracking
+implement cancellation
+
+# Anti-Patterns
+prevent promise any
+avoid callback hell
+prevent nested promises
+avoid unhandled rejections
+prevent sync operations
+enforce error handling

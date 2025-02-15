@@ -24,6 +24,8 @@ export interface RadioStation {
   language: string
   isLive: boolean
   tags: string[]
+  trending?: boolean
+  listeners?: number
 }
 
 export interface Track {
@@ -94,6 +96,8 @@ export interface AudioContextState {
   analyser: AnalyserNode | null
   gainNode: GainNode | null
   processorNode: AudioWorkletNode | null
+  equalizerInput: GainNode | null
+  equalizerOutput: GainNode | null
 }
 
 export interface AudioPlayerProps {

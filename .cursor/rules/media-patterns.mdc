@@ -1,0 +1,67 @@
+# Media Handling Patterns
+description: Advanced patterns for handling media assets and playback in music applications, focusing on performance, accessibility, and user experience optimization
+extensions: **/components/**/*.{tsx,jsx}, **/lib/{audio,media,stream}/**/*.{ts,js}, **/hooks/**/*{audio,media,player}*.{ts,js}, **/utils/**/*{media,audio,image}*.{ts,js}, **/types/**/*{audio,media}*.ts
+
+# Image Handling
+enforce-image-optimization: require next/image with proper optimization settings
+validate-image-formats: enforce WebP/AVIF with fallback support
+detect-image-loading: implement progressive loading and blur placeholders
+analyze-image-sizes: validate responsive sizes and breakpoints
+enforce-fallback-chain: implement robust fallback hierarchy
+detect-broken-images: validate image sources and error states
+
+# Audio Processing
+enforce-buffer-management: audio buffer size and memory optimization
+validate-stream-handling: proper stream implementation with error recovery
+detect-playback-issues: comprehensive playback error detection
+analyze-format-support: codec compatibility and format validation
+enforce-preload-strategy: intelligent preloading with bandwidth consideration
+detect-memory-leaks: audio resource cleanup and memory management
+
+# Caching Strategy
+enforce-cache-headers: proper cache configuration with versioning
+validate-cache-invalidation: smart cache freshness management
+detect-cache-misses: cache hit optimization and prefetching
+analyze-storage-usage: storage quota and cleanup management
+enforce-offline-first: robust offline capability implementation
+detect-stale-data: cache consistency and synchronization
+
+# Performance Metrics
+enforce-core-web-vitals: media-specific web vital optimization
+validate-playback-metrics: comprehensive playback performance tracking
+detect-loading-issues: loading performance optimization
+analyze-memory-usage: memory consumption patterns and limits
+enforce-bandwidth-rules: adaptive streaming with quality levels
+detect-performance-drops: real-time performance monitoring
+
+# Error Recovery
+enforce-graceful-fallback: comprehensive fallback mechanism chain
+validate-error-boundaries: error containment and recovery
+detect-recovery-paths: automatic recovery implementation
+analyze-error-patterns: error pattern detection and mitigation
+enforce-retry-logic: smart retry strategy with backoff
+detect-fatal-errors: critical error handling and reporting
+
+# Resource Management
+enforce-cleanup-patterns: automatic resource disposal
+validate-memory-usage: memory optimization and garbage collection
+detect-resource-leaks: comprehensive leak prevention
+analyze-load-patterns: intelligent load distribution
+enforce-lazy-loading: smart on-demand loading strategy
+detect-idle-resources: unused resource cleanup and optimization
+
+# Streaming Optimization
+enforce-chunk-management: optimal chunk size and buffering
+validate-stream-quality: adaptive quality selection
+detect-bandwidth-issues: network condition handling
+analyze-buffer-health: buffer health monitoring
+enforce-stream-recovery: stream recovery mechanisms
+detect-quality-drops: quality degradation handling
+
+# Media Security
+enforce-drm-implementation: DRM system integration
+validate-content-protection: media content security
+detect-security-vulnerabilities: security issue detection
+analyze-access-patterns: access control validation
+enforce-encryption-standards: media encryption requirements
+detect-unauthorized-access: access violation monitoring 

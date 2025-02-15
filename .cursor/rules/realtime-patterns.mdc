@@ -1,0 +1,27 @@
+---
+description: Rules for implementing realtime features in music player applications
+globs: .ts, .tsx, .js, .jsx
+---
+# WebSocket Handling
+enforce-connection-management: connection lifecycle patterns
+validate-message-protocols: message format validation
+detect-connection-issues: connection stability check
+analyze-reconnection-logic: reconnection implementation
+enforce-heartbeat-pattern: heartbeat mechanism check
+detect-message-ordering: message sequence validation
+
+# Synchronization
+enforce-state-sync: realtime state sync patterns
+validate-conflict-resolution: conflict handling check
+detect-race-conditions: race condition prevention
+analyze-eventual-consistency: consistency pattern check
+enforce-optimistic-updates: optimistic UI patterns
+detect-sync-failures: sync failure handling
+
+# Collaborative Features
+enforce-presence-tracking: user presence patterns
+validate-shared-state: shared state handling
+detect-collaboration-conflicts: conflict prevention
+analyze-concurrent-edits: concurrent edit handling
+enforce-ownership-rules: ownership validation
+detect-permission-conflicts: permission conflict check

@@ -1,0 +1,35 @@
+---
+description: Advanced component architecture rules focusing on reusability and performance
+globs: .tsx, .jsx
+---
+# Component Architecture
+enforce-atomic-design: atomic design pattern compliance
+validate-component-composition: composition over inheritance
+detect-prop-drilling: proper context usage
+analyze-component-coupling: component coupling detection
+enforce-single-responsibility: component responsibility check
+detect-component-bloat: component size optimization
+
+# Performance Rules
+enforce-virtual-rendering: virtualization for large lists
+validate-render-optimization: unnecessary render prevention
+detect-expensive-operations: performance bottleneck detection
+analyze-component-tree: component tree optimization
+enforce-code-splitting: dynamic import usage
+detect-bundle-bloat: bundle size optimization
+
+# Type Safety
+enforce-prop-types: strict prop type validation
+validate-event-types: event handler type safety
+detect-type-inconsistencies: type coverage check
+analyze-type-complexity: type structure validation
+enforce-generic-constraints: generic type constraints
+detect-type-widening: type widening prevention
+
+# Testing Patterns
+enforce-test-isolation: component test isolation
+validate-test-coverage: comprehensive test coverage
+detect-fragile-tests: test stability check
+analyze-test-patterns: test pattern validation
+enforce-accessibility-tests: a11y test coverage
+detect-test-pollution: test isolation violation

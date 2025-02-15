@@ -1,0 +1,27 @@
+---
+description: Advanced internationalization and localization rules for global music players
+globs: .ts, .tsx, .js, .jsx
+---
+# Content Localization
+enforce-translation-keys: translation implementation
+validate-language-fallbacks: language fallback patterns
+detect-missing-translations: translation coverage check
+analyze-rtl-support: RTL layout validation
+enforce-number-formatting: number format patterns
+detect-culture-specifics: cultural adaptation check
+
+# Media Support
+enforce-subtitle-support: subtitle implementation
+validate-character-encoding: text encoding patterns
+detect-font-support: font compatibility check
+analyze-audio-tracks: multiple audio track support
+enforce-timezone-handling: timezone management
+detect-format-conflicts: format compatibility check
+
+# Regional Compliance
+enforce-regional-rights: content rights validation
+validate-content-restrictions: restriction implementation
+detect-compliance-issues: compliance validation
+analyze-regional-pricing: pricing structure check
+enforce-legal-requirements: legal compliance check
+detect-restriction-patterns: restriction implementation

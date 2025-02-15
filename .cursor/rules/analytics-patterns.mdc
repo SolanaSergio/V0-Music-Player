@@ -1,0 +1,27 @@
+---
+description: Comprehensive analytics implementation rules for music player insights
+globs: .ts, .tsx, .js, .jsx
+---
+# User Interaction
+enforce-event-tracking: interaction event capture
+validate-engagement-metrics: engagement measurement
+detect-abandonment-patterns: user dropout analysis
+analyze-feature-usage: feature utilization tracking
+enforce-error-tracking: error event capture
+detect-performance-metrics: performance monitoring
+
+# Media Analytics
+enforce-playback-tracking: playback event monitoring
+validate-completion-rates: content completion analysis
+detect-skip-patterns: skip behavior tracking
+analyze-retention-metrics: user retention tracking
+enforce-quality-metrics: streaming quality monitoring
+detect-buffering-events: buffering pattern analysis
+
+# Business Intelligence
+enforce-conversion-tracking: conversion event capture
+validate-user-segments: user segmentation rules
+detect-churn-patterns: churn prediction metrics
+analyze-revenue-metrics: revenue tracking patterns
+enforce-cohort-analysis: cohort tracking setup
+detect-growth-metrics: growth pattern analysis

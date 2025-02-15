@@ -23,6 +23,7 @@ import {
   handleMouseInteraction
 } from '@/components/visualizers'
 import type { DrawContext, RippleEffect } from '@/components/visualizers/types'
+import { cn } from '@/lib/utils'
 
 export function AudioVisualizer({ 
   analyser,
@@ -34,6 +35,7 @@ export function AudioVisualizer({
   const { setupCanvas, dimensions, canvasRef } = useCanvas()
   const animationFrame = useRef<number>()
   const mouseState = useRef({ x: 0, y: 0, pressed: false })
+  const lastDataRef = useRef<Uint8Array | null>(null)
   
   const [mode, setMode] = useState(visualizerMode)
   const [colors, setColors] = useState(colorScheme)
@@ -122,7 +124,7 @@ export function AudioVisualizer({
 
   const draw = useCallback(() => {
     const ctx = setupCanvas()
-    if (!ctx || !analyser) return
+    if (!ctx) return
 
     // Reset canvas state completely
     ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -135,9 +137,20 @@ export function AudioVisualizer({
     ctx.fillStyle = scheme.background
     ctx.fillRect(0, 0, dimensions.width, dimensions.height)
 
-    // Get frequency data
-    const dataArray = new Uint8Array(analyser.frequencyBinCount)
-    analyser.getByteFrequencyData(dataArray)
+    // Get frequency data if analyser is available, otherwise use last known data
+    let dataArray: Uint8Array
+    if (analyser) {
+      dataArray = new Uint8Array(analyser.frequencyBinCount)
+      analyser.getByteFrequencyData(dataArray)
+      lastDataRef.current = dataArray
+    } else if (lastDataRef.current) {
+      // When paused, gradually decay the last known data
+      dataArray = lastDataRef.current.map(value => value * 0.95)
+      lastDataRef.current = dataArray
+    } else {
+      // If no data available, use empty array
+      dataArray = new Uint8Array(1024)
+    }
 
     // Draw current mode
     const drawContext: DrawContext = {
@@ -238,7 +251,10 @@ export function AudioVisualizer({
   }, [draw])
 
   return (
-    <div className={`relative w-full h-full ${className}`}>
+    <div className={cn(
+      "relative w-full h-full flex items-center justify-center",
+      className
+    )}>
       <canvas 
         ref={canvasRef}
         className="absolute inset-0 w-full h-full"

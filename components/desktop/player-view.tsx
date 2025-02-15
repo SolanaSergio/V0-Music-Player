@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Share2, ListMusic, Mic2, Maximize2, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Minimize2, ChevronDown } from 'lucide-react'
+import { Heart, Share2, ListMusic, Mic2, Maximize2, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Minimize2, ChevronDown, VolumeX, Volume2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import {
@@ -32,7 +32,7 @@ export function PlayerView() {
   const searchParams = useSearchParams()
   const trackId = searchParams.get('track')
   const stationId = searchParams.get('station')
-  const { setVolume: setMasterVolume } = useAudioContext()
+  const { setMasterVolume } = useAudioContext()
 
   // Find the requested track/station or default to the first track
   const initialTrack = stationId 
@@ -69,7 +69,8 @@ export function PlayerView() {
   const [showLyrics, setShowLyrics] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [volume, setVolume] = useState(0.8)
+  const [volume, setVolume] = useState(1)
+  const [isMuted, setIsMuted] = useState(false)
   const [isShuffle, setIsShuffle] = useState(false)
   const [repeatMode, setRepeatMode] = useState<'none' | 'all' | 'one'>('none')
   const [queue, setQueue] = useState(featuredTracks)
@@ -79,10 +80,14 @@ export function PlayerView() {
 
   // Handle volume changes
   useEffect(() => {
-    const safeVolume = Math.max(0, Math.min(1, volume))
+    if (!setMasterVolume) return
+    
+    const safeVolume = Math.max(0, Math.min(1, isMuted ? 0 : volume))
     setMasterVolume(safeVolume)
-    setStreamVolume(safeVolume)
-  }, [volume, setMasterVolume, setStreamVolume])
+    if (setStreamVolume) {
+      setStreamVolume(safeVolume)
+    }
+  }, [volume, isMuted, setMasterVolume, setStreamVolume])
 
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
@@ -555,6 +560,29 @@ export function PlayerView() {
           Buffering...
         </div>
       )}
+
+      {/* Volume Controls */}
+      <div className="flex items-center space-x-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 shrink-0"
+          onClick={() => setIsMuted(!isMuted)}
+        >
+          {isMuted || volume === 0 ? (
+            <VolumeX className="h-4 w-4" />
+          ) : (
+            <Volume2 className="h-4 w-4" />
+          )}
+        </Button>
+        <Slider
+          className="flex-1 cursor-pointer touch-none"
+          value={[isMuted ? 0 : volume * 100]}
+          max={100}
+          step={1}
+          onValueChange={([value]) => setVolume(value / 100)}
+        />
+      </div>
 
       <style jsx global>{`
         @keyframes grid-flow {

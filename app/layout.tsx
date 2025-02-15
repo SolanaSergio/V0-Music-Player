@@ -1,33 +1,17 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
-import { GeistSans } from 'geist/font/sans'
+import { GeistSans } from 'geist/font'
 import './globals.css'
 import { Sidebar } from '@/components/desktop/sidebar'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Header } from '@/components/desktop/header'
-import { MobileNav } from '@/components/mobile-nav'
 import { ClientLayout } from '@/components/client-layout'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
-import { ErrorLogger } from '@/components/shared/error-logger'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { AudioProvider } from '@/components/shared/audio-provider'
 
 export const metadata: Metadata = {
   title: 'Music Streaming App',
   description: 'A modern music streaming platform'
-}
-
-function RootLoading() {
-  return (
-    <div className="h-screen w-screen flex items-center justify-center bg-background">
-      <div className="text-center space-y-4">
-        <LoadingSpinner size="lg" />
-        <p className="text-sm text-muted-foreground animate-pulse">
-          Loading your music experience...
-        </p>
-      </div>
-    </div>
-  )
 }
 
 export default function RootLayout({
@@ -37,47 +21,39 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head />
       <body className={GeistSans.className} suppressHydrationWarning>
-        <ErrorLogger />
         <ErrorBoundary>
           <ClientLayout>
-            <SidebarProvider>
-              <AudioProvider>
-                <Suspense fallback={<RootLoading />}>
-                  <div className="relative flex h-screen overflow-hidden">
-                    {/* Sidebar - Hidden on mobile */}
-                    <Suspense fallback={
-                      <div className="hidden md:block w-[250px] bg-muted/20 animate-pulse" />
-                    }>
-                      <Sidebar className="hidden md:block" />
+            <div className="flex min-h-[100dvh] max-h-[100dvh] overflow-hidden">
+              <SidebarProvider>
+                <Sidebar className="hidden md:block" />
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <Header className="hidden md:block" />
+                  <main className="flex-1 overflow-hidden relative">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      {children}
                     </Suspense>
-
-                    {/* Mobile Navigation */}
-                    <Suspense fallback={null}>
-                      <MobileNav className="md:hidden" />
-                    </Suspense>
-
-                    {/* Main Content */}
-                    <main className="flex-1 flex flex-col overflow-hidden bg-background/[0.02] backdrop-blur-[2px]">
-                      <Suspense fallback={
-                        <div className="h-16 bg-muted/20 animate-pulse" />
-                      }>
-                        <Header />
-                      </Suspense>
-
-                      {/* Scrollable Content Area */}
-                      <div className="h-[calc(100vh-4rem)] overflow-y-auto pt-16 scrollbar-thin scrollbar-track-background/20 scrollbar-thumb-muted-foreground/10 hover:scrollbar-thumb-muted-foreground/20">
-                        <ErrorBoundary>
-                          {children}
-                        </ErrorBoundary>
-                      </div>
-                    </main>
-                  </div>
-                </Suspense>
-              </AudioProvider>
-            </SidebarProvider>
+                  </main>
+                </div>
+              </SidebarProvider>
+            </div>
           </ClientLayout>
         </ErrorBoundary>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('load', function() {
+                if (document.body.hasAttribute('data-new-gr-c-s-check-loaded')) {
+                  document.body.removeAttribute('data-new-gr-c-s-check-loaded');
+                }
+                if (document.body.hasAttribute('data-gr-ext-installed')) {
+                  document.body.removeAttribute('data-gr-ext-installed');
+                }
+              });
+            `
+          }}
+        />
       </body>
     </html>
   )

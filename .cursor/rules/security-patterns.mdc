@@ -1,0 +1,27 @@
+---
+description: Advanced security rules for protecting audio content and user data
+globs: .ts, .tsx, .js, .jsx
+---
+# Content Protection
+enforce-drm-implementation: DRM system validation
+validate-stream-encryption: stream security patterns
+detect-download-prevention: unauthorized download protection
+analyze-content-access: access control patterns
+enforce-watermarking: audio watermark implementation
+detect-tampering-attempts: integrity check patterns
+
+# Data Security
+enforce-authentication: auth implementation patterns
+validate-session-handling: session security validation
+detect-exposure-risks: data exposure prevention
+analyze-permission-models: permission system validation
+enforce-encryption: data encryption patterns
+detect-security-vulnerabilities: security flaw detection
+
+# API Security
+enforce-rate-limiting: API rate limit implementation
+validate-request-validation: input validation patterns
+detect-injection-risks: injection attack prevention
+analyze-api-authentication: API auth validation
+enforce-cors-policies: CORS policy implementation
+detect-security-headers: security header validation

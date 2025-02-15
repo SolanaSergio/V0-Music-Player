@@ -1,0 +1,27 @@
+---
+description: Advanced accessibility rules for music player compliance and enhanced user experience
+globs: .tsx, .jsx, .ts, .js
+---
+# Media Controls
+enforce-aria-labels: media control ARIA implementation
+validate-keyboard-shortcuts: media shortcut patterns
+detect-focus-traps: focus management validation
+analyze-tab-order: logical tab order validation
+enforce-screen-reader: screen reader optimization
+detect-interaction-patterns: interaction accessibility
+
+# Visual Patterns
+enforce-contrast-ratio: WCAG contrast compliance
+validate-color-blindness: color accessibility patterns
+detect-motion-sensitivity: reduced motion support
+analyze-text-scaling: font scaling validation
+enforce-focus-indicators: visible focus states
+detect-text-spacing: readable typography
+
+# Time-Based Media
+enforce-transcript-sync: audio transcript synchronization
+validate-caption-timing: caption timing accuracy
+detect-missing-descriptions: audio description coverage
+analyze-media-alternatives: media fallback patterns
+enforce-progress-indication: progress announcements
+detect-control-labeling: media control clarity

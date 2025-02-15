@@ -1,0 +1,43 @@
+---
+description: TypeScript rules specific to React development and component patterns
+globs: .tsx, .ts
+---
+# Component Types
+enforce prop interfaces
+require event typing
+implement ref types
+enforce children types
+require context typing
+implement hook types
+
+# Props Pattern
+enforce prop validation
+require default props
+implement prop spreading
+enforce prop destruction
+require memo usage
+implement callback typing
+
+# State Management
+enforce reducer types
+require action types
+implement context types
+enforce selector types
+require store typing
+implement effect types
+
+# Component Patterns
+enforce functional components
+require pure components
+implement HOC types
+enforce render props
+require component composition
+implement error boundaries
+
+# Anti-Patterns
+prevent any props
+avoid implicit returns
+prevent prop drilling
+avoid type assertions
+prevent default exports
+enforce named exports

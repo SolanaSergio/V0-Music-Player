@@ -1,0 +1,49 @@
+---
+description: Advanced rules for audio processing and manipulation with focus on performance and quality
+globs: .mp3, .wav, .flac, .m4a, .ogg, .ts, .js
+---
+# File Operations
+enforce async/await for all file operations
+require error boundary pattern for file handling
+validate audio metadata before processing
+implement retry mechanism for failed loads
+use Web Audio API for processing
+enforce cleanup of audio contexts
+
+# Memory Management
+require streaming for files > 10MB
+implement audio buffer pooling
+enforce garbage collection triggers
+require weak references for cached data
+implement automatic resource disposal
+
+# Audio Processing
+enforce sample rate validation
+require bit depth checking
+implement audio normalization
+validate audio format compatibility
+require proper gain staging
+enforce clipping prevention
+
+# Performance Patterns
+cache processed audio chunks
+implement lazy codec loading
+require worker thread for processing
+enforce batch processing pattern
+implement predictive loading
+require audio pipeline optimization
+
+# Error Handling
+validate corrupted file detection
+implement codec fallback system
+require comprehensive error reporting
+enforce graceful degradation
+implement auto-recovery mechanisms
+validate audio stream integrity
+
+# Anti-Patterns
+prevent direct buffer manipulation
+avoid synchronous file operations
+prevent memory leaks in audio contexts
+avoid redundant audio processing
+prevent unnecessary format conversion

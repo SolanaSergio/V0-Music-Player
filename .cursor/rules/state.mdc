@@ -1,0 +1,51 @@
+---
+description: Advanced state management rules focusing on predictability and performance
+globs: .ts, .js, .tsx, .jsx
+---
+# State Architecture
+implement event sourcing
+require CQRS pattern
+enforce immutable updates
+implement state machines
+require action creators
+enforce reducer pattern
+
+# Performance
+implement state normalization
+require selective updates
+enforce change detection
+implement state preloading
+require state compression
+enforce batch updates
+
+# Persistence
+implement storage adapters
+require migration system
+enforce state hydration
+implement state reconciliation
+require backup mechanism
+enforce state validation
+
+# Time Travel
+implement undo/redo system
+require action logging
+enforce state snapshots
+implement branching history
+require state replay
+enforce checkpoint system
+
+# Error Handling
+implement error boundaries
+require fallback states
+enforce error recovery
+implement state rollback
+require error tracking
+enforce validation rules
+
+# Anti-Patterns
+prevent state duplication
+avoid nested updates
+prevent state coupling
+avoid direct mutations
+prevent state leaks
+avoid synchronous updates

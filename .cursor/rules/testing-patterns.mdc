@@ -1,0 +1,67 @@
+# Testing Patterns
+description: Advanced testing patterns for music player components and features, ensuring comprehensive test coverage across all application layers
+extensions: **/*.test.{ts,tsx,js,jsx}, **/*.spec.{ts,tsx,js,jsx}, **/tests/**/*.{ts,tsx,js,jsx}, **/\_\_tests\_\_/**/*.{ts,tsx,js,jsx}, **/*.stories.{ts,tsx}
+
+# Component Testing
+enforce-component-isolation: isolated component tests with proper mocking
+validate-prop-testing: comprehensive prop type validation and edge cases
+detect-side-effects: side effect cleanup and isolation
+analyze-render-behavior: component lifecycle and re-render patterns
+enforce-snapshot-testing: selective snapshot coverage
+detect-test-pollution: shared state and leak prevention
+
+# Media Testing
+enforce-playback-tests: audio playback functionality validation
+validate-format-support: media format compatibility testing
+detect-streaming-issues: stream handling and buffering tests
+analyze-loading-states: loading and error state coverage
+enforce-error-scenarios: comprehensive error handling tests
+detect-memory-leaks: resource cleanup verification
+
+# State Testing
+enforce-state-transitions: state machine transition validation
+validate-state-persistence: persistent state recovery testing
+detect-state-mutations: immutability and state update verification
+analyze-state-snapshots: state snapshot comparison
+enforce-action-testing: action creator and dispatch testing
+detect-state-leaks: state cleanup and isolation
+
+# Performance Testing
+enforce-loading-metrics: performance benchmark thresholds
+validate-render-times: component render time limits
+detect-bottlenecks: performance regression testing
+analyze-memory-usage: memory leak detection
+enforce-benchmark-tests: critical path performance tests
+detect-performance-regressions: performance metric tracking
+
+# Integration Testing
+enforce-flow-testing: user journey validation
+validate-api-integration: API interaction testing
+detect-integration-issues: service integration validation
+analyze-error-handling: error recovery testing
+enforce-e2e-coverage: critical path coverage
+detect-integration-gaps: test coverage analysis
+
+# Accessibility Testing
+enforce-a11y-standards: WCAG 2.1 compliance testing
+validate-keyboard-nav: keyboard interaction testing
+detect-a11y-issues: accessibility violation checks
+analyze-screen-reader: screen reader compatibility
+enforce-focus-management: focus trap and management
+detect-a11y-regressions: accessibility regression tests
+
+# Visual Testing
+enforce-responsive-testing: viewport adaptation tests
+validate-theme-support: theme switching validation
+detect-visual-regressions: UI component stability
+analyze-animation-behavior: animation and transition tests
+enforce-layout-stability: layout shift prevention
+detect-style-conflicts: style isolation verification
+
+# Mock Testing
+enforce-mock-consistency: consistent mock implementations
+validate-mock-coverage: comprehensive mock scenarios
+detect-mock-pollution: mock cleanup verification
+analyze-mock-usage: mock interaction patterns
+enforce-mock-reset: proper mock state reset
+detect-mock-leaks: mock cleanup validation 

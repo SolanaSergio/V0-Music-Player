@@ -1,0 +1,67 @@
+# State Management Patterns
+description: Advanced state management patterns for music player applications, ensuring predictable state transitions, data integrity, and optimal performance in state-heavy features
+extensions: **/store/**/*.{ts,js}, **/reducers/**/*.{ts,js}, **/actions/**/*.{ts,js}, **/hooks/**/*{use,state}*.{ts,js}, **/context/**/*.{tsx,jsx}, **/machines/**/*.{ts,js}, **/selectors/**/*.{ts,js}
+
+# Playback State
+enforce-atomic-updates: atomic state updates with rollback capability
+validate-state-transitions: comprehensive state machine validation
+detect-state-conflicts: concurrent state modification detection
+analyze-state-history: state transition logging and replay
+enforce-state-persistence: reliable persistent state management
+detect-state-corruption: state integrity monitoring and recovery
+
+# Queue Management
+enforce-queue-integrity: robust queue state validation
+validate-queue-operations: atomic queue modifications
+detect-queue-conflicts: concurrent queue update handling
+analyze-queue-performance: queue operation optimization
+enforce-queue-persistence: reliable queue state persistence
+detect-queue-corruption: queue integrity monitoring
+
+# User Preferences
+enforce-preference-schema: strict preference validation
+validate-preference-sync: cross-device preference synchronization
+detect-preference-conflicts: preference conflict resolution
+analyze-preference-usage: preference access patterns
+enforce-preference-defaults: fallback preference handling
+detect-preference-issues: preference corruption detection
+
+# Cache State
+enforce-cache-consistency: strict cache state validation
+validate-cache-operations: atomic cache operations
+detect-cache-conflicts: concurrent cache access handling
+analyze-cache-patterns: cache usage optimization
+enforce-cache-limits: cache size and expiry management
+detect-cache-corruption: cache integrity monitoring
+
+# Error State
+enforce-error-handling: comprehensive error state management
+validate-error-recovery: error recovery validation
+detect-error-cascade: error propagation prevention
+analyze-error-frequency: error pattern analysis
+enforce-error-reporting: structured error logging
+detect-error-patterns: error pattern recognition
+
+# Sync State
+enforce-sync-protocol: robust sync mechanism
+validate-sync-operations: atomic sync operations
+detect-sync-conflicts: conflict resolution handling
+analyze-sync-patterns: sync optimization patterns
+enforce-sync-retry: intelligent retry mechanism
+detect-sync-issues: sync issue monitoring
+
+# Middleware Management
+enforce-middleware-order: middleware execution order
+validate-middleware-effects: side effect handling
+detect-middleware-conflicts: middleware interference
+analyze-middleware-performance: middleware optimization
+enforce-middleware-isolation: middleware separation
+detect-middleware-leaks: resource cleanup
+
+# State Persistence
+enforce-storage-strategy: storage mechanism validation
+validate-migration-paths: state migration handling
+detect-persistence-issues: storage error handling
+analyze-storage-patterns: storage optimization
+enforce-backup-strategy: state backup mechanism
+detect-corruption-patterns: data corruption prevention 

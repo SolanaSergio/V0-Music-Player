@@ -1,6 +1,7 @@
-import * as beatDetector from 'web-audio-beat-detector'
+/// <reference lib="webworker" />
 
-const ctx: Worker = self as any
+// Ensure we're in a worker context
+const ctx = self as DedicatedWorkerGlobalScope
 
 // Audio processing configuration
 const config = {

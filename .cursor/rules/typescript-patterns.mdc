@@ -1,0 +1,43 @@
+---
+description: Advanced TypeScript patterns and utility types for robust type safety
+globs: .ts, .tsx, .d.ts
+---
+# Utility Types
+enforce immutable types
+require branded types
+implement nominal typing
+enforce mapped types
+require conditional types
+implement template literals
+
+# Generic Patterns
+enforce type constraints
+require type guards
+implement type narrowing
+enforce type inference
+require type predicates
+implement type recursion
+
+# Advanced Types
+enforce union exhaustiveness
+require intersection types
+implement mapped types
+enforce literal types
+require readonly arrays
+implement const assertions
+
+# Type Safety
+enforce never checks
+require undefined checks
+implement null coalescing
+enforce optional chaining
+require type narrowing
+implement type guards
+
+# Anti-Patterns
+prevent type widening
+avoid type assertions
+prevent type casting
+avoid any usage
+prevent interface merging
+enforce explicit types

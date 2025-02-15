@@ -1,12 +1,26 @@
-import { Metadata } from 'next'
-import { RadioStations } from '@/components/desktop/radio-stations'
+'use client'
 
-export const metadata: Metadata = {
-  title: 'Radio Stations | Music App',
-  description: 'Listen to live radio stations from around the world',
-}
+import { RadioStations } from '@/components/desktop/radio-stations'
+import { MobileRadioView } from '@/components/mobile/mobile-radio-view'
+import { MobileLayout } from '@/components/mobile/mobile-layout'
+import { useMobile } from '@/hooks/use-mobile'
 
 export default function RadioPage() {
+  const { isMobile, isClient } = useMobile()
+
+  // Return a minimal layout during SSR
+  if (!isClient) {
+    return <div className="min-h-screen bg-background" />
+  }
+
+  if (isMobile) {
+    return (
+      <MobileLayout>
+        <MobileRadioView />
+      </MobileLayout>
+    )
+  }
+
   return (
     <div className="container py-8">
       <div className="mb-8 space-y-4">
