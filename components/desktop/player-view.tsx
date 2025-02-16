@@ -148,7 +148,7 @@ export function PlayerView() {
       }
 
       // Update URL
-      const params = new URLSearchParams(searchParams)
+      const params = new URLSearchParams(searchParams.toString())
       params.set('station', newStation.id)
       router.replace(`/player?${params.toString()}`)
 
