@@ -4,11 +4,17 @@ import { radioStations } from '@/data/audio'
 export const dynamic = 'force-dynamic'
 export const runtime = 'edge'
 
+type RouteContext = {
+  params: {
+    id: string
+  }
+}
+
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: RouteContext
 ) {
-  const station = radioStations.find(s => s.id === context.params.id)
+  const station = radioStations.find(s => s.id === params.id)
   
   if (!station) {
     return new NextResponse('Station not found', { status: 404 })
