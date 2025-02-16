@@ -6,9 +6,9 @@ export const runtime = 'edge'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const station = radioStations.find(s => s.id === params.id)
+  const station = radioStations.find(s => s.id === context.params.id)
   
   if (!station) {
     return new NextResponse('Station not found', { status: 404 })
