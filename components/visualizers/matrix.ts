@@ -1,7 +1,7 @@
 import type { DrawContext } from '@/components/visualizers/types'
 import { applySensitivity, getAverageFrequency } from './utils'
 
-interface Symbol {
+interface MatrixSymbol {
   x: number
   y: number
   value: string
@@ -12,7 +12,7 @@ interface Symbol {
 
 const symbolSize = 20
 const maxSymbols = 200
-let symbols: Symbol[] = []
+let symbols: MatrixSymbol[] = []
 
 const getRandomSymbol = () => {
   const chars = '0123456789ABCDEF'

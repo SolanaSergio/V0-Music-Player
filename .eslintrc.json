@@ -9,6 +9,15 @@
   "rules": {
     "@typescript-eslint/no-unused-vars": "warn",
     "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/ban-types": ["error", {
+      "types": {
+        "Symbol": {
+          "message": "Use symbol instead",
+          "fixWith": "symbol"
+        }
+      },
+      "extendDefaults": true
+    }],
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn"
   },
