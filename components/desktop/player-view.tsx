@@ -568,7 +568,14 @@ export function PlayerView() {
                 <ChevronDown className="h-5 w-5" />
               </Button>
               <LyricsDisplay
-                metadata={currentMetadata}
+                metadata={currentMetadata ? {
+                  id: currentMetadata.station?.id || 'live',
+                  title: currentMetadata.title,
+                  artist: currentMetadata.artist,
+                  duration: 0,
+                  streamUrl: '',
+                  lyrics: currentMetadata.lyrics
+                } : null}
                 isRecognizing={isRecognizing}
                 className="mt-4 pr-12"
               />

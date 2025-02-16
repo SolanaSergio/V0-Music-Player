@@ -186,6 +186,7 @@ export interface TrackMetadata {
   artist: string
   title: string
   timestamp: number
+  lyrics?: string
   station?: {
     id: string
     name: string
