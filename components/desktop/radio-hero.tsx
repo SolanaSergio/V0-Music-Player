@@ -2,12 +2,11 @@
 
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { RadioTower, Play, Users, Signal, Globe2 } from 'lucide-react'
+import { Play, Radio, Signal, Users, Globe2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ImageLoader } from '@/components/shared/image-loader'
 import { radioStations } from '@/data/audio'
-import { cn } from '@/lib/utils'
 
 export function RadioHero() {
   const router = useRouter()
@@ -98,7 +97,7 @@ export function RadioHero() {
               transition={{ duration: 0.5, delay: 0.3 }}
             >
               <div className="flex items-center gap-2">
-                <RadioTower className="w-5 h-5 text-primary" />
+                <Radio className="w-5 h-5 text-primary" />
                 <span className="text-lg font-semibold">{radioStations.length}+ Stations</span>
               </div>
               <div className="flex items-center gap-2">

@@ -10,7 +10,6 @@ import { RadioSearch } from '@/components/desktop/radio-search'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { RadioStations } from '@/components/desktop/radio-stations'
@@ -19,14 +18,12 @@ import {
   TrendingUp, 
   Globe2, 
   Music2, 
-  Radio, 
-  Signal, 
   ListMusic,
   Languages,
-  Filter,
   SortAsc,
   Wifi,
-  Gauge
+  Gauge,
+  Signal
 } from 'lucide-react'
 import { radioStations } from '@/data/audio'
 import type { Genre, RadioStation } from '@/types/audio'

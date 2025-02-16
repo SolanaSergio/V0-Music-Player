@@ -1,16 +1,14 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { 
-  Radio, 
   Play, 
   Users, 
   Signal, 
   Globe2, 
-  Gauge, 
-  Music2, 
+  Gauge,
+  Music2,
   Heart,
   Share2,
   Info,
@@ -18,27 +16,19 @@ import {
   TrendingUp
 } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { ImageLoader } from '@/components/shared/image-loader'
 import type { RadioStation } from '@/types/audio'
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 interface RadioStationCardProps {
   station: RadioStation
   className?: string
-  index?: number
 }
 
-export function RadioStationCard({ station, className, index = 0 }: RadioStationCardProps) {
+export function RadioStationCard({ station, className }: RadioStationCardProps) {
   const router = useRouter()
-  const [isHovered, setIsHovered] = useState(false)
 
   const handlePlay = () => {
     router.push(`/player?station=${station.id}`)
@@ -64,9 +54,7 @@ export function RadioStationCard({ station, className, index = 0 }: RadioStation
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
+      transition={{ duration: 0.4, delay: 0.05 }}
     >
       <Card 
         className={cn(
@@ -140,41 +128,24 @@ export function RadioStationCard({ station, className, index = 0 }: RadioStation
 
                 {/* Station Metadata */}
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <TooltipProvider>
-                    {station.genre && (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <div className="flex items-center gap-1">
-                            <Music2 className="w-4 h-4" />
-                            <span>{station.genre}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>Genre</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {station.country && (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <div className="flex items-center gap-1">
-                            <Globe2 className="w-4 h-4" />
-                            <span>{station.country}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>Country</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {station.bitrate && (
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <div className={cn("flex items-center gap-1", qualityInfo.color)}>
-                            <Gauge className="w-4 h-4" />
-                            <span>{formatBitrate(station.bitrate)}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>{qualityInfo.level} Quality</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </TooltipProvider>
+                  {station.genre && (
+                    <div className="flex items-center gap-1">
+                      <Music2 className="w-4 h-4" />
+                      <span>{station.genre}</span>
+                    </div>
+                  )}
+                  {station.country && (
+                    <div className="flex items-center gap-1">
+                      <Globe2 className="w-4 h-4" />
+                      <span>{station.country}</span>
+                    </div>
+                  )}
+                  {station.bitrate && (
+                    <div className={cn("flex items-center gap-1", qualityInfo.color)}>
+                      <Gauge className="w-4 h-4" />
+                      <span>{formatBitrate(station.bitrate)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -189,26 +160,15 @@ export function RadioStationCard({ station, className, index = 0 }: RadioStation
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <AnimatePresence>
-                    {isHovered && (
-                      <motion.div 
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20 }}
-                        className="flex items-center gap-2"
-                      >
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Heart className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Share2 className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Info className="w-4 h-4" />
-                        </Button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Heart className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Share2 className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Info className="w-4 h-4" />
+                  </Button>
                   <Button 
                     variant="secondary"
                     size="sm"

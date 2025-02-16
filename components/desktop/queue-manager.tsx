@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { List, GripVertical, X } from 'lucide-react'
+import { Grip, X } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -9,19 +9,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { ImageLoader } from '@/components/shared/image-loader'
 import type { Track } from '@/types/audio'
-import { cn } from "@/lib/utils"
 
 interface QueueManagerProps {
-  currentTrack?: Track
+  currentTrack: Track
   queue: Track[]
   onRemoveTrack: (index: number) => void
-  onReorderTrack: (fromIndex: number, toIndex: number) => void
-  className?: string
-  children?: React.ReactNode
+  onReorderTrack: (from: number, to: number) => void
+  children: React.ReactNode
 }
 
 export function QueueManager({
@@ -29,7 +27,6 @@ export function QueueManager({
   queue,
   onRemoveTrack,
   onReorderTrack,
-  className,
   children
 }: QueueManagerProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -52,8 +49,8 @@ export function QueueManager({
     <Sheet>
       <SheetTrigger asChild>
         {children || (
-          <Button variant="ghost" size="icon" className={className}>
-            <List className="h-5 w-5" />
+          <Button variant="ghost" size="icon">
+            <Grip className="h-5 w-5" />
             <span className="sr-only">Open queue</span>
           </Button>
         )}
@@ -69,7 +66,7 @@ export function QueueManager({
               <div className="flex items-center gap-3">
                 <div className="relative h-12 w-12 overflow-hidden rounded-md">
                   <ImageLoader
-                    src={currentTrack.image}
+                    src={currentTrack.artwork}
                     alt={currentTrack.title}
                     className="object-cover"
                   />
@@ -99,12 +96,12 @@ export function QueueManager({
                       size="icon"
                       className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <GripVertical className="h-4 w-4" />
+                      <Grip className="h-4 w-4" />
                       <span className="sr-only">Drag to reorder</span>
                     </Button>
                     <div className="relative h-12 w-12 overflow-hidden rounded-md shrink-0">
                       <ImageLoader
-                        src={track.image}
+                        src={track.artwork}
                         alt={track.title}
                         className="object-cover"
                       />
