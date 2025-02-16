@@ -34,13 +34,13 @@ export function MobileRadioView() {
   const filteredStations = useMemo(() => {
     let stations = activeGenre === 'all'
       ? radioStations
-      : radioStations.filter(station => station.genre.toLowerCase() === activeGenre)
+      : radioStations.filter(station => station.genre?.toLowerCase() === activeGenre)
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       stations = stations.filter(station => 
         station.name.toLowerCase().includes(query) ||
-        station.genre.toLowerCase().includes(query)
+        station.genre?.toLowerCase().includes(query) || false
       )
     }
 
@@ -58,7 +58,7 @@ export function MobileRadioView() {
   // Group stations by genre (memoized)
   const stationsByGenre = useMemo(() => {
     return filteredStations.reduce((acc, station) => {
-      const genre = station.genre.toLowerCase()
+      const genre = station.genre?.toLowerCase() || 'uncategorized'
       if (!acc[genre]) {
         acc[genre] = []
       }
@@ -247,9 +247,10 @@ export function MobileRadioView() {
                                 onClick={() => handleStationClick(station)}
                               >
                                 <RadioStationImage
-                                  station={station}
-                                  size="sm"
-                                  priority
+                                  src={station.image || '/images/default-station.jpg'}
+                                  alt={station.name}
+                                  width={48}
+                                  height={48}
                                 />
                                 <span className="text-xs text-center line-clamp-1">{station.name}</span>
                               </Button>
@@ -290,9 +291,10 @@ export function MobileRadioView() {
                               onClick={() => handleStationClick(station)}
                             >
                               <RadioStationImage
-                                station={station}
-                                size="md"
-                                priority={recentlyPlayed.includes(station.id) || station.trending}
+                                src={station.image || '/images/default-station.jpg'}
+                                alt={station.name}
+                                width={48}
+                                height={48}
                               />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
