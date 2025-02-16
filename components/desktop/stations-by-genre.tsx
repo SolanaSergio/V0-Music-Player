@@ -3,14 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Music2, Radio, Users, Signal, ChevronRight } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Music2, Users, Signal, ChevronRight } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ImageLoader } from '@/components/shared/image-loader'
-import { radioStations } from '@/data/audio'
 import type { Genre } from '@/types/audio'
+import { radioStations } from '@/data/audio'
 import { cn } from '@/lib/utils'
 
 interface StationsByGenreProps {

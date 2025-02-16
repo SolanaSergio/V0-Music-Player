@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Sun, Moon, Radio, Music2, Users, Sparkles } from 'lucide-react'
+import { Sun, Moon, Radio, Users, Sparkles } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { radioStations } from '@/data/audio'
@@ -27,7 +27,7 @@ export function WelcomeMessage() {
 
     // Calculate stats
     const liveStations = radioStations.filter(station => station.isLive)
-    const totalListeners = radioStations.reduce((acc, station) => acc + station.listeners, 0)
+    const totalListeners = radioStations.reduce((acc, station) => acc + (station.listeners || 0), 0)
     setStats({
       totalStations: radioStations.length,
       liveStations: liveStations.length,

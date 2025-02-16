@@ -1,14 +1,14 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
-import type { AudioSource, Track, RadioStation } from '@/types/audio'
+import type { AudioSource } from '@/types/audio'
 
 // Add type for webkit prefix
 interface Window {
   webkitAudioContext: typeof AudioContext
 }
 
-interface AudioContextState {
+interface AudioContextStateType {
   audioContext: AudioContext | null
   masterGain: GainNode | null
   isInitialized: boolean
@@ -26,7 +26,7 @@ interface AudioContextState {
   toggleMute: () => void
 }
 
-const AudioContext = createContext<AudioContextState>({
+const AudioContext = createContext<AudioContextStateType>({
   audioContext: null,
   masterGain: null,
   isInitialized: false,
@@ -48,11 +48,11 @@ export function useAudioContext() {
   return useContext(AudioContext)
 }
 
-interface AudioProviderProps {
+interface AudioProviderPropsType {
   children: React.ReactNode
 }
 
-export function AudioProvider({ children }: AudioProviderProps) {
+export function AudioProvider({ children }: AudioProviderPropsType) {
   const audioContextRef = useRef<AudioContext | null>(null)
   const masterGainRef = useRef<GainNode | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
