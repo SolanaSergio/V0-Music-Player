@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
-import { GeistSans } from 'geist/font'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import { Sidebar } from '@/components/desktop/sidebar'
 import { SidebarProvider } from '@/components/ui/sidebar'
@@ -8,6 +8,8 @@ import { Header } from '@/components/desktop/header'
 import { ClientLayout } from '@/components/client-layout'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Music Streaming App',
@@ -22,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={`${GeistSans.className} bg-background antialiased`} suppressHydrationWarning>
+      <body className={`${inter.className} bg-background antialiased`} suppressHydrationWarning>
         <ErrorBoundary>
           <ClientLayout>
             <div className="flex h-screen">

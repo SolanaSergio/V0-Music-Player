@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { Mic2 } from 'lucide-react'
-import type { TrackMetadata } from '@/types/audio'
+import type { Track } from '@/types/audio'
 
 interface LyricsDisplayProps {
-  metadata: TrackMetadata | null
+  metadata: Track | null
   isRecognizing: boolean
   className?: string
 }
@@ -29,41 +29,28 @@ export function LyricsDisplay({ metadata, isRecognizing, className }: LyricsDisp
             'h-4 w-4 transition-opacity',
             isRecognizing ? 'animate-pulse opacity-100' : hasLyrics ? 'opacity-100' : 'opacity-50'
           )} />
-          <span className="text-sm font-medium">
-            {isRecognizing ? 'Searching for lyrics...' : hasLyrics ? 'Lyrics found' : 'No lyrics available'}
-          </span>
+          <span className="text-sm font-medium">Lyrics</span>
         </div>
         {hasLyrics && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
+            className="text-xs"
           >
-            {isExpanded ? 'Show less' : 'Show more'}
+            {isExpanded ? 'Show Less' : 'Show More'}
           </Button>
         )}
       </div>
-
-      {metadata.artist && metadata.title && (
-        <div className="text-sm text-muted-foreground">
-          <p>&ldquo;{metadata.title}&rdquo; by {metadata.artist}</p>
-        </div>
-      )}
-
-      {hasLyrics && (
-        <ScrollArea className={cn(
-          'relative rounded-md border bg-muted/50 p-4 transition-all',
-          isExpanded ? 'h-[400px]' : 'h-[100px]'
-        )}>
-          <div className="whitespace-pre-line text-sm">
+      {hasLyrics ? (
+        <ScrollArea className={cn('relative', isExpanded ? 'h-[300px]' : 'h-[100px]')}>
+          <div className="space-y-4 text-sm text-muted-foreground whitespace-pre-wrap">
             {lyrics}
           </div>
         </ScrollArea>
-      )}
-
-      {!hasLyrics && !isRecognizing && (
+      ) : (
         <div className="text-sm text-muted-foreground">
-          Lyrics will appear here when available.
+          {isRecognizing ? 'Recognizing lyrics...' : 'No lyrics available'}
         </div>
       )}
     </div>

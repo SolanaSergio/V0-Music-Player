@@ -3,7 +3,7 @@
 import { Settings, Music, Clock, Heart } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { ImageLoader } from '@/components/image-loader'
+import { ImageLoader } from '@/components/shared/image-loader'
 import { cn } from "@/lib/utils"
 
 interface UserStats {

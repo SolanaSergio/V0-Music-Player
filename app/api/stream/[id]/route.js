@@ -1,23 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { radioStations } from '@/data/audio'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'edge'
 
-type RouteContext = {
-  params: {
-    id: string
-  }
-}
-
-export async function GET(
-  request: NextRequest,
-  { params }: RouteContext
-) {
+export async function GET(request, { params }) {
   const station = radioStations.find(s => s.id === params.id)
   
   if (!station) {
-    return new NextResponse('Station not found', { status: 404 })
+    return new Response('Station not found', { status: 404 })
   }
 
   try {
@@ -33,15 +23,15 @@ export async function GET(
     headers.set('Cache-Control', 'no-cache')
     headers.set('Connection', 'keep-alive')
 
-    return new NextResponse(response.body, { headers })
+    return new Response(response.body, { headers })
   } catch (error) {
     console.error('Stream error:', error)
-    return new NextResponse('Failed to connect to stream', { status: 500 })
+    return new Response('Failed to connect to stream', { status: 500 })
   }
 }
 
 export async function OPTIONS() {
-  return new NextResponse(null, {
+  return new Response(null, {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',

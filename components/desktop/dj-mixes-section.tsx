@@ -3,7 +3,7 @@ import Link from "next/link"
 import { Play, Music2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { MusicWave } from '@/components/music-wave'
+import { MusicWave } from '@/components/shared/music-wave'
 
 const mixes = [
   { 

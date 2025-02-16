@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { Music2, Play, Shuffle } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ImageLoader } from '@/components/image-loader'
+import { ImageLoader } from '@/components/shared/image-loader'
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MusicWave } from '@/components/music-wave'
+import { MusicWave } from '@/components/shared/music-wave'
 import type { Track } from '@/types/audio'
+import { cn } from '@/lib/utils'
 
 interface TrackRecommendationsProps {
   tracks: Track[]
@@ -39,8 +40,7 @@ export function TrackRecommendations({ tracks, onPlay, className }: TrackRecomme
               >
                 <div className="relative aspect-square h-12 overflow-hidden rounded-md">
                   <ImageLoader
-                    src={track.imageUrl}
-                    fallback={track.fallbackImage}
+                    src={track.artwork || '/images/default-album.jpg'}
                     alt={track.title}
                     width={48}
                     height={48}
@@ -75,10 +75,10 @@ export function TrackRecommendations({ tracks, onPlay, className }: TrackRecomme
                       )}
                     />
                   </div>
-                  {track.genre && (
+                  {track.album && (
                     <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                       <Music2 className="h-3 w-3" />
-                      <span>{track.genre}</span>
+                      <span>{track.album}</span>
                     </div>
                   )}
                 </div>

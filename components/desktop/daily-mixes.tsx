@@ -4,7 +4,7 @@ import { Sparkles, Play } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ImageLoader } from '@/components/image-loader'
+import { ImageLoader } from '@/components/shared/image-loader'
 
 const dailyMixes = [
   {

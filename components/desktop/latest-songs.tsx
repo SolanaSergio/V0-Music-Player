@@ -2,7 +2,7 @@ import Image from "next/image"
 import { MoreVertical, Play, Music2, Heart } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
-import { MusicWave } from '@/components/music-wave'
+import { MusicWave } from '@/components/shared/music-wave'
 
 const songs = [
   { 

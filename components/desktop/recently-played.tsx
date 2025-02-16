@@ -4,8 +4,8 @@ import { History, Play } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ImageLoader } from '@/components/image-loader'
-import { MusicWave } from '@/components/music-wave'
+import { ImageLoader } from '@/components/shared/image-loader'
+import { MusicWave } from '@/components/shared/music-wave'
 
 const recentTracks = [
   {
