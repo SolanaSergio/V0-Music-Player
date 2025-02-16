@@ -1,17 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useMobile } from '@/hooks/use-mobile'
 import { PlayerView } from '@/components/desktop/player-view'
 import { MobilePlayerView } from '@/components/mobile/mobile-player-view'
 import { MobileLayout } from '@/components/mobile/mobile-layout'
-import { useMobile } from '@/hooks/use-mobile'
 
 export default function PlayerPage() {
   const { isMobile, isClient } = useMobile()
-  const searchParams = useSearchParams()
-  const stationId = searchParams.get('station')
-  const trackId = searchParams.get('track')
 
   // Return a minimal layout during SSR
   if (!isClient) {

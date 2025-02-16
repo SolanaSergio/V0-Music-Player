@@ -3,6 +3,7 @@
 import { Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { MobileLayout } from '@/components/mobile/mobile-layout'
 import { MobileHome } from '@/components/mobile/mobile-home'
 import { WelcomeMessage } from '@/components/desktop/welcome-message'
@@ -13,30 +14,21 @@ import { ErrorBoundary } from '@/components/shared/error-boundary'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { RadioStations } from '@/components/desktop/radio-stations'
+import { 
+  Music2,
+  Radio,
+  Mic2,
+  Headphones,
+  Heart,
+  History,
+  ListMusic,
+  Disc3,
+  Cog
+} from 'lucide-react'
 import { useMobile } from '@/hooks/use-mobile'
 import { genres, radioStations } from '@/data/audio'
-import { 
-  Radio, 
-  Disc3, 
-  Waves, 
-  Music2, 
-  Mic2, 
-  Heart, 
-  History, 
-  Globe2, 
-  Sparkles,
-  Headphones,
-  Settings,
-  Crown,
-  Zap,
-  Clock,
-  Star,
-  Play
-} from 'lucide-react'
 
-export default function Home() {
+export default function HomePage() {
   const router = useRouter()
   const { isMobile, isClient } = useMobile()
 
@@ -61,7 +53,7 @@ export default function Home() {
       color: 'from-blue-500/10 to-blue-500/5'
     },
     {
-      icon: Waves,
+      icon: ListMusic,
       title: 'Audio Visualizer',
       description: 'Immersive visual experience synchronized with your music',
       color: 'from-purple-500/10 to-purple-500/5'
@@ -89,7 +81,7 @@ export default function Home() {
       color: 'from-red-500/10 to-red-500/5'
     },
     {
-      icon: Globe2,
+      icon: ListMusic,
       title: 'Browse Stations',
       description: 'Discover new radio stations',
       href: '/radio',
@@ -162,10 +154,12 @@ export default function Home() {
                               onClick={() => router.push(`/player?station=${station.id}`)}
                             >
                               <div className="relative w-12 h-12 rounded-lg overflow-hidden">
-                                <img
-                                  src={station.image}
+                                <Image
+                                  src={station.image || '/radio-stations/default-radio.jpg'}
                                   alt={station.name}
-                                  className="object-cover w-full h-full transition-transform group-hover:scale-105"
+                                  className="object-cover transition-transform group-hover:scale-105"
+                                  fill
+                                  sizes="48px"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent" />
                               </div>
@@ -178,7 +172,7 @@ export default function Home() {
                                 </p>
                               </div>
                               <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Play className="w-4 h-4" />
+                                <ListMusic className="w-4 h-4" />
                               </Button>
                             </motion.div>
                           ))}
@@ -198,7 +192,7 @@ export default function Home() {
             <div className="space-y-6">
               <div className="text-center space-y-2">
                 <Badge variant="outline" className="bg-background/50 backdrop-blur-sm mb-2">
-                  <Crown className="w-3 h-3 mr-1 text-primary" />
+                  <Cog className="w-3 h-3 mr-1 text-primary" />
                   Premium Experience
                 </Badge>
                 <h2 className="text-3xl font-bold">Advanced Features</h2>
@@ -237,7 +231,7 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Badge variant="outline" className="bg-background/50 backdrop-blur-sm mb-2">
-                    <Zap className="w-3 h-3 mr-1 text-primary" />
+                    <ListMusic className="w-3 h-3 mr-1 text-primary" />
                     Quick Access
                   </Badge>
                   <h2 className="text-2xl font-bold">Jump Right In</h2>
@@ -285,7 +279,7 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Badge variant="outline" className="bg-background/50 backdrop-blur-sm mb-2">
-                    <Star className="w-3 h-3 mr-1 text-primary" />
+                    <ListMusic className="w-3 h-3 mr-1 text-primary" />
                     Popular Categories
                   </Badge>
                   <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -324,7 +318,7 @@ export default function Home() {
               {[
                 { icon: Radio, label: 'Live Stations', value: '100+' },
                 { icon: Headphones, label: 'Active Listeners', value: '50k+' },
-                { icon: Globe2, label: 'Countries', value: '30+' },
+                { icon: ListMusic, label: 'Countries', value: '30+' },
                 { icon: Music2, label: 'Music Genres', value: '15+' }
               ].map((stat, index) => (
                 <motion.div

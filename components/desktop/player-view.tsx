@@ -16,13 +16,8 @@ import {
   Repeat, 
   Shuffle, 
   Minimize2, 
-  ChevronDown, 
-  VolumeX, 
-  Volume2,
-  Radio,
-  Music2,
+  ChevronDown,
   Signal,
-  Sparkles,
   Gauge,
   Globe2
 } from 'lucide-react'
@@ -47,7 +42,7 @@ import { cn } from "@/lib/utils"
 import { featuredTracks } from '@/data/audio'
 import { radioStations } from '@/data/audio'
 import { visualizerModes, colorSchemes } from '@/config/visualizer'
-import type { VisualizerMode, ColorScheme, Track, GenreIconType, RadioStation } from '@/types/audio'
+import type { VisualizerMode, ColorScheme, Track, RadioStation } from '@/types/audio'
 import { useRadioStream } from '@/hooks/use-radio-stream'
 
 export function PlayerView() {
@@ -92,7 +87,6 @@ export function PlayerView() {
   const [isLiked, setIsLiked] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [volume, setVolume] = useState(1)
-  const [isMuted, setIsMuted] = useState(false)
   const [isShuffle, setIsShuffle] = useState(false)
   const [repeatMode, setRepeatMode] = useState<'none' | 'all' | 'one'>('none')
   const [queue, setQueue] = useState(featuredTracks)
@@ -104,12 +98,12 @@ export function PlayerView() {
   useEffect(() => {
     if (!setMasterVolume) return
     
-    const safeVolume = Math.max(0, Math.min(1, isMuted ? 0 : volume))
+    const safeVolume = Math.max(0, Math.min(1, volume))
     setMasterVolume(safeVolume)
     if (setStreamVolume) {
       setStreamVolume(safeVolume)
     }
-  }, [volume, isMuted, setMasterVolume, setStreamVolume])
+  }, [volume, setMasterVolume, setStreamVolume])
 
   // Handle fullscreen keyboard shortcuts
   useEffect(() => {
@@ -177,26 +171,6 @@ export function PlayerView() {
     return radioStations[(currentIndex - 1 + radioStations.length) % radioStations.length]
   }, [])
 
-  // Handle track switching
-  const handleTrackChange = useCallback((newTrack: Track) => {
-    setCurrentTrack(newTrack)
-    const params = new URLSearchParams(searchParams)
-    params.set('track', newTrack.id)
-    router.replace(`/player?${params.toString()}`)
-    setIsPlaying(true)
-  }, [searchParams, router])
-
-  // Get next/previous tracks
-  const getNextTrack = useCallback(() => {
-    const currentIndex = featuredTracks.findIndex(t => t.id === currentTrack.id)
-    return featuredTracks[(currentIndex + 1) % featuredTracks.length]
-  }, [currentTrack.id])
-
-  const getPreviousTrack = useCallback(() => {
-    const currentIndex = featuredTracks.findIndex(t => t.id === currentTrack.id)
-    return featuredTracks[(currentIndex - 1 + featuredTracks.length) % featuredTracks.length]
-  }, [currentTrack.id])
-
   // Handle play/pause
   const handlePlayPause = useCallback(async () => {
     if (station) {
@@ -212,7 +186,7 @@ export function PlayerView() {
         console.error('Playback toggle failed:', err)
       }
     } else {
-      setIsPlaying(!isPlaying)
+      setIsPlaying(prev => !prev)
     }
   }, [station, isConnected, disconnect, connectToStream])
 

@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
@@ -74,4 +74,21 @@ export async function OPTIONS(request: NextRequest) {
       'Access-Control-Max-Age': '86400',
     },
   })
+}
+
+export async function GET() {
+  try {
+    // Return empty metadata for now
+    return new Response(JSON.stringify({
+      title: '',
+      artist: '',
+      album: '',
+      artwork: ''
+    }))
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500 }
+    )
+  }
 } 
