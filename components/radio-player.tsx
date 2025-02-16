@@ -25,7 +25,7 @@ interface RadioPlayerProps {
 }
 
 export function RadioPlayer({ station, className }: RadioPlayerProps) {
-  const { resumeContext, isInitialized, error: contextError, setVolume: setMasterVolume } = useAudioContext()
+  const { resumeContext, isInitialized, setVolume: setMasterVolume } = useAudioContext()
   const [volume, setVolume] = useState(0.75)
   const [isMuted, setIsMuted] = useState(false)
   const [visualizerMode, setVisualizerMode] = useState<VisualizerMode['id']>('bars')
@@ -129,7 +129,6 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
 
   // Determine what status/error message to show
   const getStatusMessage = () => {
-    if (contextError) return `Audio system error: ${contextError.message}`
     if (streamError) return `Stream error: ${streamError}`
     if (!isInitialized) return 'Audio context not initialized'
     if (isBuffering) return 'Buffering stream...'
@@ -276,7 +275,14 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
       {/* Lyrics Display */}
       {isConnected && (
         <LyricsDisplay
-          metadata={currentMetadata}
+          metadata={currentMetadata ? {
+            id: station.id,
+            title: currentMetadata.title,
+            artist: currentMetadata.artist,
+            duration: 0,
+            streamUrl: `/api/stream/${station.id}`,
+            lyrics: currentMetadata.lyrics
+          } : null}
           isRecognizing={isRecognizing}
           className="mt-4"
         />
@@ -287,8 +293,8 @@ export function RadioPlayer({ station, className }: RadioPlayerProps) {
         <div className={cn(
           "text-sm p-2 rounded-md",
           {
-            'bg-destructive/10 text-destructive': contextError || streamError,
-            'bg-muted text-muted-foreground': !contextError && !streamError
+            'bg-destructive/10 text-destructive': streamError,
+            'bg-muted text-muted-foreground': !streamError
           }
         )}>
           {statusMessage}
