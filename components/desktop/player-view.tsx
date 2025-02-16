@@ -3,9 +3,32 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Share2, ListMusic, Mic2, Maximize2, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Minimize2, ChevronDown, VolumeX, Volume2 } from 'lucide-react'
+import { 
+  Heart, 
+  Share2, 
+  ListMusic, 
+  Mic2, 
+  Maximize2, 
+  Play, 
+  Pause, 
+  SkipBack, 
+  SkipForward, 
+  Repeat, 
+  Shuffle, 
+  Minimize2, 
+  ChevronDown, 
+  VolumeX, 
+  Volume2,
+  Radio,
+  Music2,
+  Signal,
+  Sparkles,
+  Gauge,
+  Globe2
+} from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
+import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -193,6 +216,22 @@ export function PlayerView() {
     }
   }, [station, isConnected, disconnect, connectToStream])
 
+  // Format bitrate display
+  const formatBitrate = (bitrate?: number) => {
+    if (!bitrate) return 'Unknown'
+    return `${bitrate} kbps`
+  }
+
+  // Get quality level
+  const getQualityInfo = (bitrate?: number) => {
+    if (!bitrate) return { level: 'unknown', color: 'text-muted-foreground' }
+    if (bitrate >= 256) return { level: 'High', color: 'text-green-500' }
+    if (bitrate >= 128) return { level: 'Medium', color: 'text-yellow-500' }
+    return { level: 'Low', color: 'text-red-500' }
+  }
+
+  const qualityInfo = getQualityInfo(station?.bitrate)
+
   return (
     <div className={cn(
       "relative min-h-[calc(100vh-4rem)] overflow-hidden transition-all duration-700",
@@ -227,28 +266,50 @@ export function PlayerView() {
               <h1 className="text-2xl font-bold">{currentTrack.title}</h1>
               <div className="flex items-center gap-2">
                 <p className="text-muted-foreground">
-                  {currentTrack.isLive ? 'Now Playing' : currentTrack.artist}
+                  {currentTrack.isLive ? 'Live Radio' : currentTrack.artist}
                 </p>
-                <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-2 text-sm text-primary/80"
-                >
-                  <span className="inline-block h-1 w-1 rounded-full bg-primary/60" />
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 1, 1, 0] }}
-                    transition={{
-                      duration: 4,
-                      repeat: Infinity,
-                      repeatDelay: 1,
-                    }}
-                  >
-                    Frequnecies heal and destroy surrond yourself with the power of the universe
-                  </motion.span>
-                </motion.div>
+                {station && (
+                  <div className="flex items-center gap-2">
+                    {station.isLive && (
+                      <Badge variant="outline" className="bg-background/50 backdrop-blur-sm animate-pulse">
+                        <Signal className="w-3 h-3 mr-1 text-primary" />
+                        Live
+                      </Badge>
+                    )}
+                    {station.bitrate && (
+                      <Badge variant="outline" className={cn("bg-background/50 backdrop-blur-sm", qualityInfo.color)}>
+                        <Gauge className="w-3 h-3 mr-1" />
+                        {formatBitrate(station.bitrate)}
+                      </Badge>
+                    )}
+                    {station.country && (
+                      <Badge variant="outline" className="bg-background/50 backdrop-blur-sm">
+                        <Globe2 className="w-3 h-3 mr-1" />
+                        {station.country}
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <VolumeSlider 
+              value={volume * 100} 
+              onChange={(value: number) => setVolume(value / 100)} 
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="hover:bg-primary/20"
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-5 w-5" />
+              ) : (
+                <Maximize2 className="h-5 w-5" />
+              )}
+            </Button>
           </div>
         </div>
 
@@ -335,19 +396,6 @@ export function PlayerView() {
                   onValueChange={([value]) => setSensitivity(value)}
                 />
               </div>
-
-              <Button
-                size="icon"
-                variant="ghost"
-                className="ml-2"
-                onClick={() => setIsFullscreen(!isFullscreen)}
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="h-4 w-4" />
-                ) : (
-                  <Maximize2 className="h-4 w-4" />
-                )}
-              </Button>
             </div>
           </motion.div>
 
@@ -499,12 +547,6 @@ export function PlayerView() {
                 <Mic2 className="h-4 w-4" />
               </Button>
               <VolumeEqualizer className="h-10 w-10 rounded-full transition-all duration-300" />
-              <div className="group flex items-center gap-2">
-                <VolumeSlider 
-                  value={volume * 100} 
-                  onChange={(value: number) => setVolume(value / 100)} 
-                />
-              </div>
               <QueueManager
                 currentTrack={currentTrack}
                 queue={queue}
@@ -572,29 +614,6 @@ export function PlayerView() {
           Buffering...
         </div>
       )}
-
-      {/* Volume Controls */}
-      <div className="flex items-center space-x-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 shrink-0"
-          onClick={() => setIsMuted(!isMuted)}
-        >
-          {isMuted || volume === 0 ? (
-            <VolumeX className="h-4 w-4" />
-          ) : (
-            <Volume2 className="h-4 w-4" />
-          )}
-        </Button>
-        <Slider
-          className="flex-1 cursor-pointer touch-none"
-          value={[isMuted ? 0 : volume * 100]}
-          max={100}
-          step={1}
-          onValueChange={([value]) => setVolume(value / 100)}
-        />
-      </div>
 
       <style jsx global>{`
         @keyframes grid-flow {
